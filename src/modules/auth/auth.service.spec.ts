@@ -172,14 +172,12 @@ describe('AuthService Google Sign-In', () => {
       name: 'Existing',
       picture: null,
     });
-    usersRepository.findOne
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce({
-        userId: '55',
-        email: 'existing@texzy.com',
-        googleId: null,
-        isActive: true,
-      });
+    usersRepository.findOne.mockResolvedValueOnce(null).mockResolvedValueOnce({
+      userId: '55',
+      email: 'existing@texzy.com',
+      googleId: null,
+      isActive: true,
+    });
 
     const result = await authService.googleSignIn({ idToken: 'valid-token' });
 

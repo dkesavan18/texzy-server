@@ -10,10 +10,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
 import type { StringValue } from 'ms';
 import { Repository } from 'typeorm';
-import {
-  dbTimetzNow,
-  sanitizeUser,
-} from '../../common/utils/auth.utils';
+import { dbTimetzNow, sanitizeUser } from '../../common/utils/auth.utils';
 import { Profile, User, UserSession } from '../../database/entities';
 import { GoogleAuthService } from './google-auth.service';
 import { GoogleAuthDto } from './dto/google-auth.dto';
@@ -70,7 +67,9 @@ export class AuthService {
     const existing =
       parsed.kind === 'email'
         ? await this.usersRepository.findOne({ where: { email: parsed.email } })
-        : await this.usersRepository.findOne({ where: { phone: parsed.phone } });
+        : await this.usersRepository.findOne({
+            where: { phone: parsed.phone },
+          });
 
     if (existing) {
       throw new ConflictException(
@@ -102,7 +101,10 @@ export class AuthService {
         throw new ConflictException('Google account is already linked');
       }
 
-      if (googleClaims.email && googleClaims.email.toLowerCase() !== parsed.email) {
+      if (
+        googleClaims.email &&
+        googleClaims.email.toLowerCase() !== parsed.email
+      ) {
         throw new BadRequestException(
           'Registration email must match the verified Google account email',
         );
@@ -154,7 +156,9 @@ export class AuthService {
     const user =
       parsed.kind === 'email'
         ? await this.usersRepository.findOne({ where: { email: parsed.email } })
-        : await this.usersRepository.findOne({ where: { phone: parsed.phone } });
+        : await this.usersRepository.findOne({
+            where: { phone: parsed.phone },
+          });
 
     if (!user?.passwordHash) {
       throw new UnauthorizedException('Invalid email, phone, or password');

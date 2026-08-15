@@ -13,6 +13,7 @@ import { NeedsModule } from './modules/needs/needs.module';
 import { ProductsModule } from './modules/products/products.module';
 import { ProfilesModule } from './modules/profiles/profiles.module';
 import { SessionsModule } from './modules/sessions/sessions.module';
+import { UploadsModule } from './modules/uploads/uploads.module';
 import { UsersModule } from './modules/users/users.module';
 import { VerificationsModule } from './modules/verifications/verifications.module';
 
@@ -37,6 +38,7 @@ import { VerificationsModule } from './modules/verifications/verifications.modul
     CollectionsModule,
     ConversationsModule,
     DealsModule,
+    UploadsModule,
   ],
 })
 export class AppModule {}

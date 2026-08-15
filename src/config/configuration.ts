@@ -24,4 +24,35 @@ export default () => ({
     androidClientId: process.env.GOOGLE_ANDROID_CLIENT_ID ?? '',
     iosClientId: process.env.GOOGLE_IOS_CLIENT_ID ?? '',
   },
+  storage: {
+    r2: {
+      accountId: process.env.R2_ACCOUNT_ID ?? '',
+      accessKeyId: process.env.R2_ACCESS_KEY_ID ?? '',
+      secretAccessKey: process.env.R2_SECRET_ACCESS_KEY ?? '',
+      bucketName: process.env.R2_BUCKET_NAME ?? '',
+      publicBaseUrl: process.env.R2_PUBLIC_BASE_URL ?? '',
+      presignExpiresSeconds: parseInt(
+        process.env.R2_PRESIGNED_URL_EXPIRES_SECONDS ?? '300',
+        10,
+      ),
+    },
+    upload: {
+      maxFileSizeBytes: parseInt(
+        process.env.UPLOAD_MAX_FILE_SIZE_BYTES ?? '8388608',
+        10,
+      ),
+      allowedMimeTypes: (
+        process.env.UPLOAD_ALLOWED_MIME_TYPES ??
+        'image/jpeg,image/png,image/webp'
+      )
+        .split(',')
+        .map((type) => type.trim())
+        .filter(Boolean),
+    },
+    thumbnail: {
+      // 800px @ quality 85 keeps thumbnails crisp on retina/2x grids without a huge file size.
+      maxWidth: parseInt(process.env.THUMBNAIL_MAX_WIDTH ?? '800', 10),
+      quality: parseInt(process.env.THUMBNAIL_QUALITY ?? '85', 10),
+    },
+  },
 });

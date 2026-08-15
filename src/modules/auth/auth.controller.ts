@@ -38,9 +38,9 @@ export class AuthController {
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
-      @ApiOperation({
-        summary: 'Email or phone login for customer and business accounts',
-      })
+  @ApiOperation({
+    summary: 'Email or phone login for customer and business accounts',
+  })
   login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
   }

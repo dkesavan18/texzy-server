@@ -19,7 +19,9 @@ export class CategoriesService {
   ) {}
 
   findAllTypes() {
-    return this.categoryTypesRepository.find({ order: { categoryTypeId: 'ASC' } });
+    return this.categoryTypesRepository.find({
+      order: { categoryTypeId: 'ASC' },
+    });
   }
 
   createType(dto: CreateCategoryTypeDto) {

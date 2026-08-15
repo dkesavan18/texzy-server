@@ -40,13 +40,18 @@ export class RegisterDto {
     example: 'Texzy Textiles',
     description: 'Business name — required when accountType is "business"',
   })
-  @ValidateIf((dto: RegisterDto) => dto.accountType === RegisterAccountType.BUSINESS)
+  @ValidateIf(
+    (dto: RegisterDto) => dto.accountType === RegisterAccountType.BUSINESS,
+  )
   @IsString()
-  @IsNotEmpty({ message: 'displayName (business name) is required for business accounts' })
+  @IsNotEmpty({
+    message: 'displayName (business name) is required for business accounts',
+  })
   displayName?: string;
 
   @ApiPropertyOptional({
-    description: 'Category id for the business type, from GET /categories?type=business',
+    description:
+      'Category id for the business type, from GET /categories?type=business',
   })
   @IsOptional()
   @IsNumber()

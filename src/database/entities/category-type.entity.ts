@@ -6,7 +6,12 @@ export class CategoryType {
   @PrimaryGeneratedColumn({ name: 'category_type_id', type: 'int' })
   categoryTypeId: number;
 
-  @Column({ name: 'category_type', type: 'varchar', length: 50, nullable: true })
+  @Column({
+    name: 'category_type',
+    type: 'varchar',
+    length: 50,
+    nullable: true,
+  })
   categoryType: string | null;
 
   @Column({ name: 'created_at', type: 'timetz', nullable: true })

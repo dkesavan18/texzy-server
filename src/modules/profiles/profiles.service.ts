@@ -39,6 +39,14 @@ export class ProfilesService {
     return profile;
   }
 
+  /** Unlike findByUserId, returns null instead of 404 — a business account may not have a profile row yet. */
+  findMine(userId: string) {
+    return this.profilesRepository.findOne({
+      where: { userId },
+      relations: { businessType: true },
+    });
+  }
+
   async upsertMine(userId: string, dto: UpdateProfileDto) {
     const now = dbTimetzNow();
     let profile = await this.profilesRepository.findOne({ where: { userId } });
@@ -54,6 +62,7 @@ export class ProfilesService {
       Object.assign(profile, dto, { updatedAt: now });
     }
 
-    return this.profilesRepository.save(profile);
+    await this.profilesRepository.save(profile);
+    return this.findMine(userId);
   }
 }

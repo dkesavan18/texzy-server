@@ -13,10 +13,7 @@ import type { AuthUser } from '../../common/decorators/current-user.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CollectionsService } from './collections.service';
-import {
-  CreateCollectionDto,
-  UpdateCollectionDto,
-} from './dto/collection.dto';
+import { CreateCollectionDto, UpdateCollectionDto } from './dto/collection.dto';
 
 @ApiTags('collections')
 @Controller('collections')

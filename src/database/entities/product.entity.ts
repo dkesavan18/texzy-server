@@ -54,7 +54,9 @@ export class Product {
   @Column({ name: 'updated_at', type: 'timetz', nullable: true })
   updatedAt: string | null;
 
-  @ManyToOne(() => Category, (category) => category.products, { nullable: true })
+  @ManyToOne(() => Category, (category) => category.products, {
+    nullable: true,
+  })
   @JoinColumn({ name: 'product_category_id' })
   productCategory: Category | null;
 

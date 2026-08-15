@@ -20,9 +20,9 @@ export class ProfilesController {
   @Get('me')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get my profile' })
+  @ApiOperation({ summary: 'Get my profile (null if not created yet)' })
   me(@CurrentUser() user: AuthUser) {
-    return this.profilesService.findByUserId(user.userId);
+    return this.profilesService.findMine(user.userId);
   }
 
   @Put('me')

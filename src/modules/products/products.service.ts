@@ -25,6 +25,15 @@ export class ProductsService {
     });
   }
 
+  findAllByUser(userId: string, take = 100) {
+    return this.productsRepository.find({
+      where: { userId, isActive: true },
+      take,
+      order: { productId: 'DESC' },
+      relations: { media: true },
+    });
+  }
+
   async findOne(productId: string) {
     const product = await this.productsRepository.findOne({
       where: { productId },

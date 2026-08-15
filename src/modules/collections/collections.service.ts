@@ -7,10 +7,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { dbTimetzNow } from '../../common/utils/auth.utils';
 import { Collection } from '../../database/entities';
-import {
-  CreateCollectionDto,
-  UpdateCollectionDto,
-} from './dto/collection.dto';
+import { CreateCollectionDto, UpdateCollectionDto } from './dto/collection.dto';
 
 @Injectable()
 export class CollectionsService {

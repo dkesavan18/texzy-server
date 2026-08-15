@@ -8,11 +8,7 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import {
-  ApiBearerAuth,
-  ApiOperation,
-  ApiTags,
-} from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { AuthUser } from '../../common/decorators/current-user.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -28,6 +24,14 @@ export class ProductsController {
   @ApiOperation({ summary: 'List active products' })
   findAll() {
     return this.productsService.findAll();
+  }
+
+  @Get('mine')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "List the current user's own products" })
+  findMine(@CurrentUser() user: AuthUser) {
+    return this.productsService.findAllByUser(user.userId);
   }
 
   @Get(':id')
