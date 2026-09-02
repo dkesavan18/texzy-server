@@ -10,7 +10,11 @@ import { NeedResponse } from './need-response.entity';
 import { NeedTag } from './need-tag.entity';
 import { NeedTagsMapping } from './need-tags-mapping.entity';
 import { Need } from './need.entity';
+import { OrderItem } from './order-item.entity';
+import { Order } from './order.entity';
+import { Payment } from './payment.entity';
 import { ProductMedia } from './product-media.entity';
+import { ProductVariant } from './product-variant.entity';
 import { Product } from './product.entity';
 import { Profile } from './profile.entity';
 import { ResponseMedia } from './response-media.entity';
@@ -29,6 +33,7 @@ export const entities = [
   UserSession,
   Product,
   ProductMedia,
+  ProductVariant,
   Need,
   NeedMedia,
   NeedResponse,
@@ -40,6 +45,9 @@ export const entities = [
   ConversationEvent,
   Deal,
   DealStatus,
+  Order,
+  OrderItem,
+  Payment,
 ];
 
 export {
@@ -55,8 +63,12 @@ export {
   NeedTag,
   NeedTagsMapping,
   Need,
+  Order,
+  OrderItem,
+  Payment,
   ProductMedia,
   Product,
+  ProductVariant,
   Profile,
   ResponseMedia,
   UserDevice,

@@ -1,10 +1,15 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import {
+  ArrayMinSize,
+  IsArray,
   IsEnum,
   IsNotEmpty,
   IsNumber,
   IsOptional,
   IsString,
+  IsUrl,
+  MaxLength,
   MinLength,
   ValidateIf,
 } from 'class-validator';
@@ -51,11 +56,64 @@ export class RegisterDto {
 
   @ApiPropertyOptional({
     description:
-      'Category id for the business type, from GET /categories?type=business',
+      'Business type category id — from GET /categories?type=business_type',
   })
-  @IsOptional()
+  @ValidateIf(
+    (dto: RegisterDto) => dto.accountType === RegisterAccountType.BUSINESS,
+  )
+  @Type(() => Number)
   @IsNumber()
   businessTypeId?: number;
+
+  @ApiPropertyOptional({
+    description:
+      'Business mode category id — from GET /categories?type=business_mode',
+  })
+  @ValidateIf(
+    (dto: RegisterDto) => dto.accountType === RegisterAccountType.BUSINESS,
+  )
+  @Type(() => Number)
+  @IsNumber()
+  businessModeId?: number;
+
+  @ApiPropertyOptional({
+    description:
+      'Business category ids — from GET /categories?type=business_category',
+    type: [Number],
+  })
+  @ValidateIf(
+    (dto: RegisterDto) => dto.accountType === RegisterAccountType.BUSINESS,
+  )
+  @IsArray()
+  @ArrayMinSize(1)
+  @Type(() => Number)
+  @IsNumber({}, { each: true })
+  businessCategoryIds?: number[];
+
+  @ApiPropertyOptional({
+    description: 'Short business description shown to buyers',
+    maxLength: 500,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  description?: string;
+
+  @ApiPropertyOptional({
+    description: 'Business address or map location text',
+  })
+  @IsOptional()
+  @IsString()
+  location?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Cloudflare R2 public URL for the profile image (optional at signup; can be set later via uploads)',
+  })
+  @IsOptional()
+  @IsString()
+  @IsUrl({ require_protocol: true })
+  profileUrl?: string;
 
   @ApiPropertyOptional({
     description:

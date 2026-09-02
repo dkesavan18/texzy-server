@@ -21,11 +21,48 @@ npm run start:dev
 - API: `http://localhost:3000/api`
 - Swagger: `http://localhost:3000/api/docs`
 
+## API response format
+
+Every endpoint returns the same JSON envelope. The **HTTP status code** is set on the response (e.g. `401 Unauthorized`) — it is **not** repeated inside the body.
+
+**Success** (HTTP 2xx):
+
+```json
+{
+  "success": true,
+  "error": null,
+  "data": {}
+}
+```
+
+**Error** (HTTP 4xx / 5xx):
+
+```json
+{
+  "success": false,
+  "error": "Human-readable message or validation error array",
+  "data": null
+}
+```
+
+## User roles
+
+`users.role_id` references `categories.category_id`:
+
+| category_id | Role | Assigned when |
+|-------------|------|----------------|
+| 1 | Admin | `POST /api/auth/admin/register` (existing admin only) |
+| 2 | Buyer | `POST /api/auth/register` with `accountType: "customer"` |
+| 3 | Seller (business) | `POST /api/auth/register` with `accountType: "business"` |
+
+Ensure these three role rows exist in `categories` before using auth.
+
 ## Auth APIs
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| POST | `/api/auth/register` | No | Business register (optional `googleRegistrationToken`) |
+| POST | `/api/auth/register` | No | Register buyer or seller (role auto-assigned) |
+| POST | `/api/auth/admin/register` | Admin JWT | Create another admin account |
 | POST | `/api/auth/login` | No | Email/password login |
 | POST | `/api/auth/refresh` | No | Rotate tokens |
 | GET | `/api/auth/me` | Bearer | Current user |

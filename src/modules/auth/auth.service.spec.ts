@@ -4,6 +4,7 @@ import { JwtService } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Profile, User, UserSession } from '../../database/entities';
+import { CategoriesService } from '../categories/categories.service';
 import { AuthService } from './auth.service';
 import { GoogleAuthService } from './google-auth.service';
 
@@ -66,6 +67,16 @@ describe('AuthService Google Sign-In', () => {
           useValue: sessionsRepository,
         },
         { provide: getRepositoryToken(Profile), useValue: { save: jest.fn() } },
+        {
+          provide: CategoriesService,
+          useValue: {
+            resolveRoleIdForAccountType: jest.fn().mockResolvedValue(2),
+            resolveAdminRoleId: jest.fn().mockResolvedValue(1),
+            validateBusinessTypeId: jest.fn().mockResolvedValue(1),
+            validateBusinessModeId: jest.fn().mockResolvedValue(2),
+            validateBusinessCategoryIds: jest.fn().mockResolvedValue([3]),
+          },
+        },
         { provide: JwtService, useValue: jwtService },
         {
           provide: ConfigService,

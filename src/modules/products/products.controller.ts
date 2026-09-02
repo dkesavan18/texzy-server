@@ -21,7 +21,7 @@ export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
   @Get()
-  @ApiOperation({ summary: 'List active products' })
+  @ApiOperation({ summary: 'List published products' })
   findAll() {
     return this.productsService.findAll();
   }
@@ -29,21 +29,44 @@ export class ProductsController {
   @Get('mine')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: "List the current user's own products" })
+  @ApiOperation({
+    summary: "List the current user's own products (drafts and published)",
+  })
   findMine(@CurrentUser() user: AuthUser) {
     return this.productsService.findAllByUser(user.userId);
   }
 
+  @Get('mine/:id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Get one of the current user\'s own products by id (drafts included) — used to resume editing',
+  })
+  findOneMine(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.productsService.findOneMine(user.userId, id);
+  }
+
   @Get(':id')
-  @ApiOperation({ summary: 'Get product by id' })
+  @ApiOperation({ summary: 'Get a published product by id' })
   findOne(@Param('id') id: string) {
     return this.productsService.findOne(id);
+  }
+
+  @Post('draft')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary:
+      'Step 1 of Add Product — immediately creates an empty DRAFT product and returns its id',
+  })
+  createDraft(@CurrentUser() user: AuthUser) {
+    return this.productsService.createDraft(user.userId);
   }
 
   @Post()
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Create product' })
+  @ApiOperation({ summary: 'Create a fully-specified product directly (published immediately)' })
   create(@CurrentUser() user: AuthUser, @Body() dto: CreateProductDto) {
     return this.productsService.create(user.userId, dto);
   }
@@ -51,13 +74,26 @@ export class ProductsController {
   @Patch(':id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Update product' })
+  @ApiOperation({
+    summary: 'Update product details (also used for draft autosave)',
+  })
   update(
     @CurrentUser() user: AuthUser,
     @Param('id') id: string,
     @Body() dto: UpdateProductDto,
   ) {
     return this.productsService.update(user.userId, id, dto);
+  }
+
+  @Post(':id/publish')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary:
+      'Validates the draft (name, price, category, >=1 photo) and flips DRAFT -> ACTIVE',
+  })
+  publish(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.productsService.publish(user.userId, id);
   }
 
   @Delete(':id')

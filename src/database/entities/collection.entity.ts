@@ -16,8 +16,8 @@ export class Collection {
   @Column({ name: 'collection_category_id', type: 'int', nullable: true })
   collectionCategoryId: number | null;
 
-  @Column({ name: 'product_id', type: 'int', array: true, nullable: true })
-  productId: number[] | null;
+  @Column({ name: 'product_id', type: 'bigint', array: true, nullable: true })
+  productId: string[] | null;
 
   @Column({ name: 'created_at', type: 'timetz', nullable: true })
   createdAt: string | null;

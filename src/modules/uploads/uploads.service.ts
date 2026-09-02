@@ -98,6 +98,7 @@ export class UploadsService {
       dto.entityType,
       scopeId,
       dto.fileName,
+      user.userId,
     );
     const uploadUrl = await this.storageService.getPresignedPutUrl(
       storageKey,
@@ -140,6 +141,7 @@ export class UploadsService {
       dto.storageKey,
       dto.entityType,
       scopeId,
+      user.userId,
     );
 
     await this.storageService.putObject(
@@ -161,6 +163,13 @@ export class UploadsService {
       user,
       dto.entityType,
       dto.entityId,
+    );
+
+    this.assertStorageKeyMatchesEntity(
+      dto.storageKey,
+      dto.entityType,
+      scopeId,
+      user.userId,
     );
 
     const head = await this.storageService.headObject(dto.storageKey);
@@ -221,8 +230,8 @@ export class UploadsService {
     switch (entityType) {
       case 'profile-logo': {
         const profile = await this.getOrCreateProfile(user.userId);
-        await this.deleteOldObjectIfAny(profile.profileImage);
-        profile.profileImage = null;
+        await this.deleteOldObjectIfAny(profile.profileUrl);
+        profile.profileUrl = null;
         profile.updatedAt = dbTimetzNow();
         await this.profilesRepository.save(profile);
         return { success: true };
@@ -365,12 +374,14 @@ export class UploadsService {
     entityType: UploadEntityType,
     scopeId: string,
     fileName: string,
+    ownerId: string,
   ): string {
     const ext = extname(fileName).replace('.', '').toLowerCase() || 'jpg';
     const uuid = randomUUID();
     switch (entityType) {
       case 'product':
-        return `products/${scopeId}/${uuid}.${ext}`;
+        // products/{user_id}/{product_id}/image-{uuid}.{ext}
+        return `products/${ownerId}/${scopeId}/image-${uuid}.${ext}`;
       case 'need':
         return `needs/${scopeId}/${uuid}.${ext}`;
       case 'need-response':
@@ -387,10 +398,11 @@ export class UploadsService {
   private getStorageKeyPrefix(
     entityType: UploadEntityType,
     scopeId: string,
+    ownerId: string,
   ): string {
     switch (entityType) {
       case 'product':
-        return `products/${scopeId}`;
+        return `products/${ownerId}/${scopeId}`;
       case 'need':
         return `needs/${scopeId}`;
       case 'need-response':
@@ -407,8 +419,9 @@ export class UploadsService {
     storageKey: string,
     entityType: UploadEntityType,
     scopeId: string,
+    ownerId: string,
   ) {
-    const prefix = this.getStorageKeyPrefix(entityType, scopeId);
+    const prefix = this.getStorageKeyPrefix(entityType, scopeId, ownerId);
     if (!storageKey.startsWith(`${prefix}/`)) {
       throw new BadRequestException(
         'storageKey does not match this upload request',
@@ -507,7 +520,9 @@ export class UploadsService {
       createdAt: now,
       updatedAt: now,
     });
-    return this.productMediaRepository.save(media);
+    const saved = await this.productMediaRepository.save(media);
+    await this.touchProductActivity(productId);
+    return saved;
   }
 
   private async createNeedMedia(
@@ -587,11 +602,11 @@ export class UploadsService {
     switch (entityType) {
       case 'profile-logo': {
         const target = profile as Profile;
-        await this.deleteOldObjectIfAny(target.profileImage);
-        target.profileImage = mediaUrl;
+        await this.deleteOldObjectIfAny(target.profileUrl);
+        target.profileUrl = mediaUrl;
         target.updatedAt = now;
         const saved = await this.profilesRepository.save(target);
-        return { entityType, url: saved.profileImage, profile: saved };
+        return { entityType, url: saved.profileUrl, profile: saved };
       }
       case 'profile-cover': {
         const target = profile as Profile;
@@ -662,7 +677,11 @@ export class UploadsService {
       media.displayOrder = dto.displayOrder;
     }
     media.updatedAt = dbTimetzNow();
-    return this.productMediaRepository.save(media);
+    const saved = await this.productMediaRepository.save(media);
+    if (media.productId) {
+      await this.touchProductActivity(media.productId);
+    }
+    return saved;
   }
 
   private async updateNeedMedia(
@@ -742,8 +761,12 @@ export class UploadsService {
       throw new NotFoundException(`Product media ${mediaId} not found`);
     }
     this.assertOwner(media.product?.userId ?? null, user.userId, 'products');
+    const productId = media.productId;
     await this.deleteMediaObjects(media.storageKey);
     await this.productMediaRepository.remove(media);
+    if (productId) {
+      await this.touchProductActivity(productId);
+    }
     return { success: true };
   }
 
@@ -777,6 +800,13 @@ export class UploadsService {
     await this.deleteMediaObjects(media.storageKey);
     await this.responseMediaRepository.remove(media);
     return { success: true };
+  }
+
+  /** Marks the draft as recently touched so it survives the 24h abandoned-draft cleanup. */
+  private async touchProductActivity(productId: string): Promise<void> {
+    await this.productsRepository
+      .update({ productId }, { lastActivityAt: new Date() })
+      .catch(() => undefined);
   }
 
   private async deleteMediaObjects(storageKey: string | null) {

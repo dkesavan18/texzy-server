@@ -15,8 +15,10 @@ import {
 } from '@nestjs/swagger';
 import type { AuthUser } from '../../common/decorators/current-user.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { AdminRoleGuard } from '../../common/guards/admin-role.guard';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { AuthService } from './auth.service';
+import { CreateAdminDto } from './dto/create-admin.dto';
 import { GoogleAuthDto } from './dto/google-auth.dto';
 import { LoginDto } from './dto/login.dto';
 import { LogoutDto } from './dto/logout.dto';
@@ -30,10 +32,24 @@ export class AuthController {
 
   @Post('register')
   @ApiOperation({
-    summary: 'Register a customer or business account (see accountType)',
+    summary: 'Register a buyer (customer) or seller (business) account',
+    description:
+      'Role is assigned automatically from categories: buyer = category_id 2, seller = category_id 3.',
   })
   register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
+  }
+
+  @Post('admin/register')
+  @UseGuards(JwtAuthGuard, AdminRoleGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Create an admin account (admin only)',
+    description:
+      'Creates a user with role category_id = 1 (admin). Requires an existing admin JWT.',
+  })
+  createAdmin(@Body() dto: CreateAdminDto) {
+    return this.authService.createAdmin(dto);
   }
 
   @Post('login')

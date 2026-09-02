@@ -55,4 +55,13 @@ export default () => ({
       quality: parseInt(process.env.THUMBNAIL_QUALITY ?? '85', 10),
     },
   },
+  payments: {
+    razorpay: {
+      // Test-mode keys from the Razorpay Dashboard (Settings -> API Keys). Never commit real values.
+      keyId: process.env.RAZORPAY_KEY_ID ?? '',
+      keySecret: process.env.RAZORPAY_KEY_SECRET ?? '',
+      // Settings -> Webhooks -> (create webhook) -> Secret. Only needed once a public URL is configured.
+      webhookSecret: process.env.RAZORPAY_WEBHOOK_SECRET ?? '',
+    },
+  },
 });

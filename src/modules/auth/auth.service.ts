@@ -12,11 +12,13 @@ import type { StringValue } from 'ms';
 import { Repository } from 'typeorm';
 import { dbTimetzNow, sanitizeUser } from '../../common/utils/auth.utils';
 import { Profile, User, UserSession } from '../../database/entities';
+import { CategoriesService } from '../categories/categories.service';
 import { GoogleAuthService } from './google-auth.service';
 import { GoogleAuthDto } from './dto/google-auth.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { parseIdentifier } from '../../common/utils/identifier.utils';
+import { CreateAdminDto } from './dto/create-admin.dto';
 import { RegisterAccountType, RegisterDto } from './dto/register.dto';
 
 type TokenPair = {
@@ -52,6 +54,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly googleAuthService: GoogleAuthService,
+    private readonly categoriesService: CategoriesService,
   ) {}
 
   /** Registers either a customer or a business account, based on dto.accountType. */
@@ -116,6 +119,10 @@ export class AuthService {
     const passwordHash = await bcrypt.hash(dto.password, 10);
     const now = dbTimetzNow();
 
+    const roleId = await this.categoriesService.resolveRoleIdForAccountType(
+      dto.accountType,
+    );
+
     const user = this.usersRepository.create({
       email: parsed.email,
       phone: parsed.phone,
@@ -124,18 +131,96 @@ export class AuthService {
       loginProvider,
       isActive: true,
       isCustomer,
+      roleId,
       createdAt: now,
       updatedAt: now,
     });
 
     const saved = await this.usersRepository.save(user);
 
-    if (!isCustomer && dto.displayName) {
+    if (!isCustomer) {
+      const businessTypeId = await this.categoriesService.validateBusinessTypeId(
+        dto.businessTypeId!,
+      );
+      const businessModeId = await this.categoriesService.validateBusinessModeId(
+        dto.businessModeId!,
+      );
+      const businessCategoryIds =
+        await this.categoriesService.validateBusinessCategoryIds(
+          dto.businessCategoryIds!,
+        );
+
       await this.profilesRepository.save(
         this.profilesRepository.create({
           userId: saved.userId,
-          displayName: dto.displayName,
-          businessTypeId: dto.businessTypeId ?? null,
+          displayName: dto.displayName!.trim(),
+          businessTypeId,
+          businessModeId,
+          businessCategoryIds,
+          description: dto.description?.trim() || null,
+          location: dto.location?.trim() || null,
+          profileUrl: dto.profileUrl ?? null,
+          contactEmail: parsed.email,
+          contactPhone: parsed.phone,
+          createdAt: now,
+          updatedAt: now,
+        }),
+      );
+    }
+
+    return this.issueAuthResponse(saved, loginProvider);
+  }
+
+  /** Create an admin account (role category_id = 1). Requires an existing admin JWT. */
+  async createAdmin(dto: CreateAdminDto): Promise<AuthSuccessResponse> {
+    const parsed = parseIdentifier(dto.identifier);
+    if (!parsed) {
+      throw new BadRequestException(
+        'Enter a valid email or 10–15 digit mobile number',
+      );
+    }
+
+    const existing =
+      parsed.kind === 'email'
+        ? await this.usersRepository.findOne({ where: { email: parsed.email } })
+        : await this.usersRepository.findOne({
+            where: { phone: parsed.phone },
+          });
+
+    if (existing) {
+      throw new ConflictException(
+        parsed.kind === 'email'
+          ? 'Email is already registered'
+          : 'Phone number is already registered',
+      );
+    }
+
+    const passwordHash = await bcrypt.hash(dto.password, 10);
+    const now = dbTimetzNow();
+    const roleId = await this.categoriesService.resolveAdminRoleId();
+
+    const loginProvider = parsed.kind === 'phone' ? 'phone' : 'email';
+
+    const user = this.usersRepository.create({
+      email: parsed.email,
+      phone: parsed.phone,
+      passwordHash,
+      googleId: null,
+      loginProvider,
+      isActive: true,
+      isCustomer: false,
+      roleId,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    const saved = await this.usersRepository.save(user);
+
+    if (dto.displayName?.trim()) {
+      await this.profilesRepository.save(
+        this.profilesRepository.create({
+          userId: saved.userId,
+          displayName: dto.displayName.trim(),
           contactEmail: parsed.email,
           contactPhone: parsed.phone,
           createdAt: now,
@@ -231,7 +316,7 @@ export class AuthService {
     }
 
     return {
-      user: sanitizeUser(user),
+      user: sanitizeUser(user, user.profiles?.[0]?.profileUrl ?? null),
       profile: user.profiles?.[0] ?? null,
     };
   }
@@ -366,11 +451,14 @@ export class AuthService {
     user: User,
     loginProvider: string,
   ): Promise<AuthSuccessResponse> {
+    const profile = await this.profilesRepository.findOne({
+      where: { userId: user.userId },
+    });
     const tokens = await this.createTokenPair(user);
     await this.persistSession(user, tokens, loginProvider);
 
     return {
-      user: sanitizeUser(user),
+      user: sanitizeUser(user, profile?.profileUrl ?? null),
       ...tokens,
     };
   }

@@ -3,19 +3,22 @@ export function dbTimetzNow(): string {
   return new Date().toTimeString().split(' ')[0];
 }
 
-export function sanitizeUser(user: {
-  userId: string;
-  email: string | null;
-  phone: string | null;
-  roleId: number | null;
-  isActive: boolean | null;
-  isCustomer: boolean | null;
-  loginProvider: string | null;
-  googleId: string | null;
-  createdAt: string | null;
-  updatedAt: string | null;
-  passwordHash?: string | null;
-}) {
+export function sanitizeUser(
+  user: {
+    userId: string;
+    email: string | null;
+    phone: string | null;
+    roleId: number | null;
+    isActive: boolean | null;
+    isCustomer: boolean | null;
+    loginProvider: string | null;
+    googleId: string | null;
+    createdAt: string | null;
+    updatedAt: string | null;
+    passwordHash?: string | null;
+  },
+  profileUrl: string | null = null,
+) {
   return {
     userId: user.userId,
     email: user.email,
@@ -25,6 +28,7 @@ export function sanitizeUser(user: {
     isCustomer: user.isCustomer,
     loginProvider: user.loginProvider,
     hasGoogleLinked: Boolean(user.googleId),
+    profileUrl,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
   };

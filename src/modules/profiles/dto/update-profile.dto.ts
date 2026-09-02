@@ -1,5 +1,13 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsNumber, IsOptional, IsString } from 'class-validator';
+import { Type } from 'class-transformer';
+import {
+  IsArray,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsUrl,
+  MaxLength,
+} from 'class-validator';
 
 export class UpdateProfileDto {
   @ApiPropertyOptional({ description: 'Business / display name shown across the app' })
@@ -12,15 +20,19 @@ export class UpdateProfileDto {
   @IsString()
   about?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ maxLength: 500 })
   @IsOptional()
   @IsString()
+  @MaxLength(500)
   description?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({
+    description: 'Cloudflare R2 public URL for the profile / logo image',
+  })
   @IsOptional()
   @IsString()
-  profileImage?: string;
+  @IsUrl({ require_protocol: true })
+  profileUrl?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -42,13 +54,35 @@ export class UpdateProfileDto {
   @IsString()
   contactPhone?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({
+    description: 'Business type category id — from GET /categories?type=business_type',
+  })
   @IsOptional()
+  @Type(() => Number)
   @IsNumber()
   businessTypeId?: number;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({
+    description: 'Business mode category id — from GET /categories?type=business_mode',
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  businessModeId?: number;
+
+  @ApiPropertyOptional({
+    description:
+      'Business category ids — from GET /categories?type=business_category',
+    type: [Number],
+  })
+  @IsOptional()
+  @IsArray()
+  @Type(() => Number)
+  @IsNumber({}, { each: true })
+  businessCategoryIds?: number[];
+
+  @ApiPropertyOptional({ description: 'Business address or map location text' })
   @IsOptional()
   @IsString()
-  profileUrl?: string;
+  location?: string;
 }

@@ -9,6 +9,8 @@ import {
   UserDevice,
   UserSession,
 } from '../../database/entities';
+import { AdminRoleGuard } from '../../common/guards/admin-role.guard';
+import { CategoriesModule } from '../categories/categories.module';
 import { UsersModule } from '../users/users.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
@@ -18,6 +20,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 @Module({
   imports: [
     UsersModule,
+    CategoriesModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -29,7 +32,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     TypeOrmModule.forFeature([User, UserSession, UserDevice, Profile]),
   ],
   controllers: [AuthController],
-  providers: [AuthService, GoogleAuthService, JwtStrategy],
+  providers: [AuthService, GoogleAuthService, JwtStrategy, AdminRoleGuard],
   exports: [AuthService, GoogleAuthService, JwtModule],
 })
 export class AuthModule {}

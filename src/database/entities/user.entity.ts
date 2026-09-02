@@ -13,6 +13,7 @@ import { ConversationEvent } from './conversation-event.entity';
 import { Deal } from './deal.entity';
 import { Need } from './need.entity';
 import { NeedResponse } from './need-response.entity';
+import { Order } from './order.entity';
 import { Product } from './product.entity';
 import { Profile } from './profile.entity';
 import { UserDevice } from './user-device.entity';
@@ -96,4 +97,7 @@ export class User {
 
   @OneToMany(() => NeedResponse, (response) => response.respondedByUser)
   needResponses: NeedResponse[];
+
+  @OneToMany(() => Order, (order) => order.user)
+  orders: Order[];
 }

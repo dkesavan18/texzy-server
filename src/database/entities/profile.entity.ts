@@ -19,9 +19,6 @@ export class Profile {
   @Column({ name: 'display_name', type: 'varchar', nullable: true })
   displayName: string | null;
 
-  @Column({ name: 'profile_image', type: 'text', nullable: true })
-  profileImage: string | null;
-
   @Column({ name: 'language', type: 'varchar', nullable: true })
   language: string | null;
 
@@ -37,8 +34,20 @@ export class Profile {
   @Column({ name: 'ratings', type: 'smallint', nullable: true })
   ratings: number | null;
 
+  /** From GET /categories?type=business_type */
   @Column({ name: 'business_type_id', type: 'int', nullable: true })
   businessTypeId: number | null;
+
+  /** From GET /categories?type=business_mode */
+  @Column({ name: 'business_mode_id', type: 'int', nullable: true })
+  businessModeId: number | null;
+
+  /** From GET /categories?type=business_category (multi-select) */
+  @Column({ name: 'business_category_ids', type: 'jsonb', nullable: true })
+  businessCategoryIds: number[] | null;
+
+  @Column({ name: 'location', type: 'text', nullable: true })
+  location: string | null;
 
   @Column({ name: 'verify_percentage', type: 'int', nullable: true })
   verifyPercentage: number | null;
@@ -58,6 +67,7 @@ export class Profile {
   @Column({ name: 'locations', type: 'jsonb', array: true, nullable: true })
   locations: Record<string, unknown>[] | null;
 
+  /** Public Cloudflare R2 URL for the business profile / logo image. */
   @Column({ name: 'profile_url', type: 'text', nullable: true })
   profileUrl: string | null;
 
@@ -70,4 +80,8 @@ export class Profile {
   })
   @JoinColumn({ name: 'business_type_id' })
   businessType: Category | null;
+
+  @ManyToOne(() => Category, { nullable: true })
+  @JoinColumn({ name: 'business_mode_id' })
+  businessMode: Category | null;
 }

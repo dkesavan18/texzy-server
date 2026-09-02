@@ -21,13 +21,29 @@ export class CollectionsController {
   constructor(private readonly collectionsService: CollectionsService) {}
 
   @Get()
-  @ApiOperation({ summary: 'List collections' })
+  @ApiOperation({ summary: 'List active collections (public)' })
   findAll() {
     return this.collectionsService.findAll();
   }
 
+  @Get('mine')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'List current user collections' })
+  findAllMine(@CurrentUser() user: AuthUser) {
+    return this.collectionsService.findAllByUser(user.userId);
+  }
+
+  @Get('mine/:id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get owned collection by id' })
+  findOneMine(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.collectionsService.findOneMine(user.userId, id);
+  }
+
   @Get(':id')
-  @ApiOperation({ summary: 'Get collection by id' })
+  @ApiOperation({ summary: 'Get active collection by id (public)' })
   findOne(@Param('id') id: string) {
     return this.collectionsService.findOne(id);
   }
@@ -55,7 +71,7 @@ export class CollectionsController {
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Soft-delete collection' })
+  @ApiOperation({ summary: 'Soft-delete collection and remove cover image from storage' })
   remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.collectionsService.remove(user.userId, id);
   }
