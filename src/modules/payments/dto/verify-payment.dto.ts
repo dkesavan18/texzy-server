@@ -6,11 +6,15 @@ export class VerifyPaymentDto {
   @IsString()
   razorpayOrderId: string;
 
-  @ApiProperty({ description: 'razorpay_payment_id from the Checkout success handler' })
+  @ApiProperty({
+    description: 'razorpay_payment_id from the Checkout success handler',
+  })
   @IsString()
   razorpayPaymentId: string;
 
-  @ApiProperty({ description: 'razorpay_signature from the Checkout success handler' })
+  @ApiProperty({
+    description: 'razorpay_signature from the Checkout success handler',
+  })
   @IsString()
   razorpaySignature: string;
 }

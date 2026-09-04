@@ -1,3 +1,5 @@
+import { CartItem } from './cart-item.entity';
+import { Cart } from './cart.entity';
 import { CategoryType } from './category-type.entity';
 import { Category } from './category.entity';
 import { Collection } from './collection.entity';
@@ -10,6 +12,9 @@ import { NeedResponse } from './need-response.entity';
 import { NeedTag } from './need-tag.entity';
 import { NeedTagsMapping } from './need-tags-mapping.entity';
 import { Need } from './need.entity';
+import { NotificationToken } from './notification-token.entity';
+import { Notification } from './notification.entity';
+import { OrderItemStatus } from './order-item-status.entity';
 import { OrderItem } from './order-item.entity';
 import { Order } from './order.entity';
 import { Payment } from './payment.entity';
@@ -45,12 +50,19 @@ export const entities = [
   ConversationEvent,
   Deal,
   DealStatus,
+  Cart,
+  CartItem,
   Order,
   OrderItem,
+  OrderItemStatus,
   Payment,
+  Notification,
+  NotificationToken,
 ];
 
 export {
+  Cart,
+  CartItem,
   CategoryType,
   Category,
   Collection,
@@ -63,8 +75,11 @@ export {
   NeedTag,
   NeedTagsMapping,
   Need,
+  Notification,
+  NotificationToken,
   Order,
   OrderItem,
+  OrderItemStatus,
   Payment,
   ProductMedia,
   Product,

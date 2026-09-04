@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Not, Repository } from 'typeorm';
 import { dbTimetzNow } from '../../common/utils/auth.utils';
 import { Product, ProductVariant } from '../../database/entities';
 import { PRODUCT_STATUS } from './constants/product-status.constant';
@@ -25,10 +25,17 @@ export class ProductsService {
     private readonly variantsRepository: Repository<ProductVariant>,
   ) {}
 
-  /** List endpoints intentionally skip the variants relation — variants only matter for a single product's add/edit/detail view. */
-  async findAll(take = 50) {
+  /**
+   * List endpoints intentionally skip the variants relation — variants only matter for a single product's add/edit/detail view.
+   * When `excludeUserId` is set (authenticated seller browsing explore), that user's own products are omitted.
+   */
+  async findAll(take = 50, excludeUserId?: string) {
     const products = await this.productsRepository.find({
-      where: { isActive: true, status: PRODUCT_STATUS.ACTIVE },
+      where: {
+        isActive: true,
+        status: PRODUCT_STATUS.ACTIVE,
+        ...(excludeUserId ? { userId: Not(excludeUserId) } : {}),
+      },
       take,
       order: { productId: 'DESC' },
       relations: { media: true },
@@ -55,7 +62,14 @@ export class ProductsService {
     if (!product) {
       throw new NotFoundException(`Product ${productId} not found`);
     }
-    return this.serialize(product);
+    // Fire-and-forget — never slow the detail response for analytics counters.
+    void this.productsRepository
+      .increment({ productId }, 'totalViews', 1)
+      .catch(() => undefined);
+    return this.serialize({
+      ...product,
+      totalViews: (product.totalViews ?? 0) + 1,
+    });
   }
 
   /** Owner lookup — works for drafts and published products alike, used to resume editing. */
@@ -243,6 +257,7 @@ export class ProductsService {
         productId,
         variantName: dto.variantName.trim(),
         price: dto.price ?? null,
+        compareAtPrice: dto.compareAtPrice ?? null,
         quantity: dto.quantity ?? null,
         mediaIds: dto.mediaIds ?? [],
         displayOrder: dto.displayOrder ?? index,

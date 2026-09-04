@@ -23,6 +23,12 @@ export class ProductVariantDto {
   @Min(0)
   price?: number;
 
+  @ApiPropertyOptional({ description: 'Original/MRP price for this variant' })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  compareAtPrice?: number;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsNumber()

@@ -50,7 +50,8 @@ export class UploadsController {
   @Post('upload')
   @ApiConsumes('multipart/form-data')
   @ApiOperation({
-    summary: 'Upload image bytes through the API (use when direct R2 PUT fails CORS)',
+    summary:
+      'Upload image bytes through the API (use when direct R2 PUT fails CORS)',
   })
   @ApiBody({
     schema: {

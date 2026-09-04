@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -7,7 +8,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { R2StorageService } from '../../common/storage/r2-storage.service';
 import { dbTimetzNow } from '../../common/utils/auth.utils';
-import { Collection } from '../../database/entities';
+import { Category, Collection } from '../../database/entities';
 import { CreateCollectionDto, UpdateCollectionDto } from './dto/collection.dto';
 
 @Injectable()
@@ -15,6 +16,8 @@ export class CollectionsService {
   constructor(
     @InjectRepository(Collection)
     private readonly collectionsRepository: Repository<Collection>,
+    @InjectRepository(Category)
+    private readonly categoriesRepository: Repository<Category>,
     private readonly storageService: R2StorageService,
   ) {}
 
@@ -57,11 +60,14 @@ export class CollectionsService {
     return collection;
   }
 
-  create(userId: string, dto: CreateCollectionDto) {
+  async create(userId: string, dto: CreateCollectionDto) {
+    const collectionType = await this.resolveCollectionType(dto.collectionCategoryId);
     const now = dbTimetzNow();
     return this.collectionsRepository.save(
       this.collectionsRepository.create({
         ...dto,
+        collectionCategoryId: collectionType.categoryId,
+        collectionTitle: collectionType.categoryName,
         userId,
         isActive: true,
         createdAt: now,
@@ -72,8 +78,36 @@ export class CollectionsService {
 
   async update(userId: string, collectionId: string, dto: UpdateCollectionDto) {
     const collection = await this.findOneMine(userId, collectionId);
-    Object.assign(collection, dto, { updatedAt: dbTimetzNow() });
+    const nextCategoryId = dto.collectionCategoryId ?? collection.collectionCategoryId;
+    if (nextCategoryId == null) {
+      throw new BadRequestException('collectionCategoryId is required');
+    }
+    const collectionType = await this.resolveCollectionType(nextCategoryId);
+    Object.assign(collection, dto, {
+      collectionCategoryId: collectionType.categoryId,
+      collectionTitle: collectionType.categoryName,
+      updatedAt: dbTimetzNow(),
+    });
     return this.collectionsRepository.save(collection);
+  }
+
+  private async resolveCollectionType(categoryId: number) {
+    const category = await this.categoriesRepository
+      .createQueryBuilder('category')
+      .leftJoinAndSelect('category.categoryType', 'categoryType')
+      .where('category.category_id = :id', { id: categoryId })
+      .andWhere('category.is_active = true')
+      .andWhere('categoryType.category_type = :type', { type: 'collection_type' })
+      .getOne();
+
+    if (!category || !category.categoryName?.trim()) {
+      throw new BadRequestException('Select a valid collection type');
+    }
+
+    return {
+      categoryId: Number(category.categoryId),
+      categoryName: category.categoryName.trim(),
+    };
   }
 
   async remove(userId: string, collectionId: string) {

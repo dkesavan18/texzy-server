@@ -10,8 +10,21 @@ import { Repository } from 'typeorm';
 import { RazorpayService } from '../../common/payments/razorpay.service';
 import type { AuthUser } from '../../common/decorators/current-user.decorator';
 import { dbTimetzNow } from '../../common/utils/auth.utils';
-import { Order, OrderItem, Payment, Product } from '../../database/entities';
 import {
+  Order,
+  OrderItem,
+  Payment,
+  Product,
+  ProductVariant,
+} from '../../database/entities';
+import { CartService } from '../cart/cart.service';
+import {
+  NOTIFICATION_REFERENCE_TYPE,
+  NOTIFICATION_TYPE,
+} from '../notifications/constants/notification-type.constant';
+import { NotificationsService } from '../notifications/notifications.service';
+import {
+  ORDER_SOURCE,
   ORDER_STATUS,
   PAYMENT_RECORD_STATUS,
   PAYMENT_STATUS,
@@ -43,7 +56,11 @@ export class PaymentsService {
     private readonly orderItemsRepository: Repository<OrderItem>,
     @InjectRepository(Product)
     private readonly productsRepository: Repository<Product>,
+    @InjectRepository(ProductVariant)
+    private readonly variantsRepository: Repository<ProductVariant>,
     private readonly razorpayService: RazorpayService,
+    private readonly cartService: CartService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   /**
@@ -122,7 +139,9 @@ export class PaymentsService {
         break;
       }
       default:
-        this.logger.log(`Ignoring unhandled Razorpay webhook event: ${body.event}`);
+        this.logger.log(
+          `Ignoring unhandled Razorpay webhook event: ${body.event}`,
+        );
     }
 
     return { received: true };
@@ -203,6 +222,10 @@ export class PaymentsService {
 
   /** Confirms the order and reduces stock — only ever called once per order (guarded above). */
   private async confirmOrderAndReduceStock(orderId: string): Promise<void> {
+    const orderBeforeUpdate = await this.ordersRepository.findOne({
+      where: { orderId },
+    });
+
     await this.ordersRepository
       .createQueryBuilder()
       .update(Order)
@@ -215,8 +238,21 @@ export class PaymentsService {
       .andWhere('status != :confirmed', { confirmed: ORDER_STATUS.CONFIRMED })
       .execute();
 
+    // Safety net for cart-based checkouts whose client never got to call /cart clear
+    // (e.g. tab closed right after paying). Gated on source='cart' so a Buy Now purchase
+    // never wipes out unrelated items the buyer is still saving in their cart.
+    if (orderBeforeUpdate?.source === ORDER_SOURCE.CART) {
+      await this.cartService
+        .clear(orderBeforeUpdate.userId)
+        .catch(() => undefined);
+    }
+
     const items = await this.orderItemsRepository.find({ where: { orderId } });
     for (const item of items) {
+      const product = await this.productsRepository.findOne({
+        where: { productId: item.productId },
+      });
+
       const result = await this.productsRepository
         .createQueryBuilder()
         .update(Product)
@@ -229,10 +265,40 @@ export class PaymentsService {
         .setParameter('qty', item.quantity)
         .execute();
 
+      // Seller only learns about a paid order now — an unpaid/failed order never reaches them.
+      if (product?.userId) {
+        void this.notificationsService.notify({
+          userId: product.userId,
+          type: NOTIFICATION_TYPE.ORDER_RECEIVED,
+          title: 'New order received',
+          message: `${item.quantity} x ${product.productName ?? 'product'} — order #${orderBeforeUpdate?.orderNumber ?? orderId}`,
+          referenceId: item.orderItemId,
+          referenceType: NOTIFICATION_REFERENCE_TYPE.ORDER_ITEM,
+          data: { link: `/catalogues/orders/${item.orderItemId}` },
+        });
+      }
+
       if (result.affected !== 1) {
         this.logger.warn(
           `Stock for product ${item.productId} was insufficient or untracked when confirming order ${orderId} — skipped decrement`,
         );
+      }
+
+      if (item.productVariantId) {
+        await this.variantsRepository
+          .createQueryBuilder()
+          .update(ProductVariant)
+          .set({
+            quantity: () => 'quantity - :qty',
+            updatedAt: new Date(),
+          })
+          .where('product_variant_id = :variantId', {
+            variantId: item.productVariantId,
+          })
+          .andWhere('quantity >= :qty', { qty: item.quantity })
+          .setParameter('qty', item.quantity)
+          .execute()
+          .catch(() => undefined);
       }
     }
   }

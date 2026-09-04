@@ -70,6 +70,10 @@ export class Product {
   @Column({ name: 'orders_count', type: 'bigint', nullable: true })
   ordersCount: string | null;
 
+  /** Public product-detail views — incremented on GET /products/:id only. */
+  @Column({ name: 'total_views', type: 'int', default: 0 })
+  totalViews: number;
+
   @Column({ name: 'product_name', type: 'varchar', nullable: true })
   productName: string | null;
 

@@ -55,6 +55,13 @@ export default () => ({
       quality: parseInt(process.env.THUMBNAIL_QUALITY ?? '85', 10),
     },
   },
+  firebase: {
+    // Firebase Admin SDK (server-side push sender) — never sent to the frontend.
+    // From Firebase Console -> Project settings -> Service accounts -> Generate new private key.
+    projectId: process.env.FIREBASE_PROJECT_ID ?? '',
+    clientEmail: process.env.FIREBASE_CLIENT_EMAIL ?? '',
+    privateKey: process.env.FIREBASE_PRIVATE_KEY ?? '',
+  },
   payments: {
     razorpay: {
       // Test-mode keys from the Razorpay Dashboard (Settings -> API Keys). Never commit real values.

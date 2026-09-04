@@ -28,7 +28,11 @@ export class ProfilesService {
     if (!profile) {
       throw new NotFoundException(`Profile ${profileId} not found`);
     }
-    return profile;
+    // Fire-and-forget — never slow the detail response for analytics counters.
+    void this.profilesRepository
+      .increment({ profileId }, 'totalViews', 1)
+      .catch(() => undefined);
+    return { ...profile, totalViews: (profile.totalViews ?? 0) + 1 };
   }
 
   async findByUserId(userId: string) {

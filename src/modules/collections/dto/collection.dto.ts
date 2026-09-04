@@ -8,12 +8,12 @@ import {
 } from 'class-validator';
 
 export class CreateCollectionDto {
-  @IsString()
-  collectionTitle: string;
+  @IsNumber()
+  collectionCategoryId: number;
 
   @IsOptional()
-  @IsNumber()
-  collectionCategoryId?: number;
+  @IsString()
+  collectionTitle?: string;
 
   @IsOptional()
   @IsArray()

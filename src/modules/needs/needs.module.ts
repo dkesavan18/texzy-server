@@ -6,13 +6,16 @@ import {
   NeedResponse,
   NeedTag,
   NeedTagsMapping,
+  Profile,
   ResponseMedia,
 } from '../../database/entities';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { NeedsController } from './needs.controller';
 import { NeedsService } from './needs.service';
 
 @Module({
   imports: [
+    NotificationsModule,
     TypeOrmModule.forFeature([
       Need,
       NeedMedia,
@@ -20,6 +23,7 @@ import { NeedsService } from './needs.service';
       ResponseMedia,
       NeedTag,
       NeedTagsMapping,
+      Profile,
     ]),
   ],
   controllers: [NeedsController],

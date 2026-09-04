@@ -34,6 +34,10 @@ export class Profile {
   @Column({ name: 'ratings', type: 'smallint', nullable: true })
   ratings: number | null;
 
+  /** Public business-profile views — incremented on GET /profiles/:id only. */
+  @Column({ name: 'total_views', type: 'int', default: 0 })
+  totalViews: number;
+
   /** From GET /categories?type=business_type */
   @Column({ name: 'business_type_id', type: 'int', nullable: true })
   businessTypeId: number | null;

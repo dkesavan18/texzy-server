@@ -19,6 +19,7 @@ import {
   Need,
   NeedMedia,
   NeedResponse,
+  OrderItem,
   Product,
   ProductMedia,
   Profile,
@@ -72,6 +73,8 @@ export class UploadsService {
     private readonly collectionsRepository: Repository<Collection>,
     @InjectRepository(Profile)
     private readonly profilesRepository: Repository<Profile>,
+    @InjectRepository(OrderItem)
+    private readonly orderItemsRepository: Repository<OrderItem>,
   ) {
     this.maxFileSizeBytes = this.configService.get<number>(
       'storage.upload.maxFileSizeBytes',
@@ -121,7 +124,11 @@ export class UploadsService {
    */
   async uploadObject(
     user: AuthUser,
-    dto: { storageKey: string; entityType: UploadEntityType; entityId?: string },
+    dto: {
+      storageKey: string;
+      entityType: UploadEntityType;
+      entityId?: string;
+    },
     file: UploadedFilePayload,
   ) {
     this.assertAllowedContentType(file.mimetype);
@@ -258,6 +265,23 @@ export class UploadsService {
         await this.collectionsRepository.save(collection);
         return { success: true };
       }
+      case 'order-item-delivery': {
+        const orderItem = await this.requireEntity(
+          this.orderItemsRepository,
+          'orderItemId',
+          entityId,
+          'Order item',
+        );
+        const product = await this.productsRepository.findOne({
+          where: { productId: orderItem.productId },
+        });
+        this.assertOwner(product?.userId ?? null, user.userId, 'order items');
+        await this.deleteOldObjectIfAny(orderItem.deliveryPhotoUrl);
+        orderItem.deliveryPhotoUrl = null;
+        orderItem.updatedAt = new Date();
+        await this.orderItemsRepository.save(orderItem);
+        return { success: true };
+      }
     }
   }
 
@@ -315,6 +339,19 @@ export class UploadsService {
       case 'profile-cover': {
         const profile = await this.getOrCreateProfile(user.userId);
         return { scopeId: user.userId, profile };
+      }
+      case 'order-item-delivery': {
+        const orderItem = await this.requireEntity(
+          this.orderItemsRepository,
+          'orderItemId',
+          entityId,
+          'Order item',
+        );
+        const product = await this.productsRepository.findOne({
+          where: { productId: orderItem.productId },
+        });
+        this.assertOwner(product?.userId ?? null, user.userId, 'order items');
+        return { scopeId: orderItem.orderItemId };
       }
     }
   }
@@ -392,6 +429,8 @@ export class UploadsService {
         return `profiles/${scopeId}/logo-${uuid}.${ext}`;
       case 'profile-cover':
         return `profiles/${scopeId}/cover-${uuid}.${ext}`;
+      case 'order-item-delivery':
+        return `order-items/${scopeId}/delivery-${uuid}.${ext}`;
     }
   }
 
@@ -412,6 +451,8 @@ export class UploadsService {
       case 'profile-logo':
       case 'profile-cover':
         return `profiles/${scopeId}`;
+      case 'order-item-delivery':
+        return `order-items/${scopeId}`;
     }
   }
 
@@ -631,6 +672,23 @@ export class UploadsService {
           entityType,
           url: saved.coverImageUrl,
           collection: saved,
+        };
+      }
+      case 'order-item-delivery': {
+        const orderItem = await this.requireEntity(
+          this.orderItemsRepository,
+          'orderItemId',
+          dto.entityId,
+          'Order item',
+        );
+        await this.deleteOldObjectIfAny(orderItem.deliveryPhotoUrl);
+        orderItem.deliveryPhotoUrl = mediaUrl;
+        orderItem.updatedAt = new Date();
+        const saved = await this.orderItemsRepository.save(orderItem);
+        return {
+          entityType,
+          url: saved.deliveryPhotoUrl,
+          orderItem: saved,
         };
       }
     }

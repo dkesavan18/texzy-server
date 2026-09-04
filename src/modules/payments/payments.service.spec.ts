@@ -53,7 +53,10 @@ describe('PaymentsService', () => {
         PaymentsService,
         { provide: getRepositoryToken(Payment), useValue: paymentsRepository },
         { provide: getRepositoryToken(Order), useValue: ordersRepository },
-        { provide: getRepositoryToken(OrderItem), useValue: orderItemsRepository },
+        {
+          provide: getRepositoryToken(OrderItem),
+          useValue: orderItemsRepository,
+        },
         { provide: getRepositoryToken(Product), useValue: productsRepository },
         { provide: RazorpayService, useValue: razorpayService },
       ],
@@ -80,7 +83,10 @@ describe('PaymentsService', () => {
     });
 
     it('rejects verifying a payment that belongs to another user', async () => {
-      paymentsRepository.findOne.mockResolvedValue({ ...basePayment, userId: '999' });
+      paymentsRepository.findOne.mockResolvedValue({
+        ...basePayment,
+        userId: '999',
+      });
 
       await expect(
         service.verifyPayment(authUser as any, {
@@ -116,7 +122,7 @@ describe('PaymentsService', () => {
         paymentStatus: 'paid',
       });
 
-      const result = await service.verifyPayment(authUser as any, {
+      const result = await service.verifyPayment(authUser, {
         razorpayOrderId: 'order_RZP1',
         razorpayPaymentId: 'pay_1',
         razorpaySignature: 'good',
@@ -138,7 +144,10 @@ describe('PaymentsService', () => {
     it('does not re-confirm the order or reduce stock again on a duplicate verify call', async () => {
       // Simulates calling /payments/razorpay/verify twice with the same payload —
       // the second call finds the payment already 'paid', so the UPDATE affects 0 rows.
-      paymentsRepository.findOne.mockResolvedValue({ ...basePayment, status: 'paid' });
+      paymentsRepository.findOne.mockResolvedValue({
+        ...basePayment,
+        status: 'paid',
+      });
       razorpayService.verifyPaymentSignature.mockReturnValue(true);
 
       const paymentsQb = createQueryBuilderMock({ affected: 0 });
@@ -150,7 +159,7 @@ describe('PaymentsService', () => {
         paymentStatus: 'paid',
       });
 
-      await service.verifyPayment(authUser as any, {
+      await service.verifyPayment(authUser, {
         razorpayOrderId: 'order_RZP1',
         razorpayPaymentId: 'pay_1',
         razorpaySignature: 'good',
@@ -173,9 +182,9 @@ describe('PaymentsService', () => {
     });
 
     it('rejects a webhook with a missing signature header', async () => {
-      await expect(service.handleWebhook(Buffer.from('{}'), undefined)).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        service.handleWebhook(Buffer.from('{}'), undefined),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('processes payment.captured idempotently, confirming stock reduction only once', async () => {
@@ -183,13 +192,18 @@ describe('PaymentsService', () => {
       const rawBody = Buffer.from(
         JSON.stringify({
           event: 'payment.captured',
-          payload: { payment: { entity: { id: 'pay_1', order_id: 'order_RZP1' } } },
+          payload: {
+            payment: { entity: { id: 'pay_1', order_id: 'order_RZP1' } },
+          },
         }),
       );
 
       const paymentsQb = createQueryBuilderMock({ affected: 1 });
       paymentsRepository.createQueryBuilder.mockReturnValue(paymentsQb);
-      paymentsRepository.findOne.mockResolvedValue({ ...basePayment, status: 'paid' });
+      paymentsRepository.findOne.mockResolvedValue({
+        ...basePayment,
+        status: 'paid',
+      });
 
       const ordersQb = createQueryBuilderMock({ affected: 1 });
       ordersRepository.createQueryBuilder.mockReturnValue(ordersQb);

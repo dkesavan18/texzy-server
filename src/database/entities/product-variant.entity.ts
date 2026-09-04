@@ -21,6 +21,9 @@ export class ProductVariant {
   @Column({ name: 'price', type: 'float8', nullable: true })
   price: number | null;
 
+  @Column({ name: 'compare_at_price', type: 'float8', nullable: true })
+  compareAtPrice: number | null;
+
   @Column({ name: 'quantity', type: 'int', nullable: true })
   quantity: number | null;
 

@@ -31,6 +31,13 @@ export class Order {
   @Column({ name: 'status', type: 'varchar', length: 20, default: 'created' })
   status: string;
 
+  /**
+   * 'buy_now' | 'cart' — decides whether payment confirmation is allowed to clear the
+   * buyer's cart (only 'cart' orders should ever touch it).
+   */
+  @Column({ name: 'source', type: 'varchar', length: 20, default: 'buy_now' })
+  source: string;
+
   /** 'pending' | 'paid' | 'failed'. */
   @Column({
     name: 'payment_status',
