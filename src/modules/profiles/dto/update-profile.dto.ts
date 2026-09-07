@@ -44,6 +44,15 @@ export class UpdateProfileDto {
   @IsString()
   language?: string;
 
+  @ApiPropertyOptional({
+    description: 'Preferred display currency code (e.g. INR, USD, EUR)',
+    example: 'INR',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(10)
+  preferredCurrency?: string;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()

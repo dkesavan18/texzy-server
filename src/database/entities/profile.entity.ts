@@ -22,6 +22,10 @@ export class Profile {
   @Column({ name: 'language', type: 'varchar', nullable: true })
   language: string | null;
 
+  /** Display currency for pricing (explore sub-header). Defaults to INR. */
+  @Column({ name: 'preferred_currency', type: 'varchar', length: 10, default: 'INR' })
+  preferredCurrency: string;
+
   @Column({ name: 'cover_image', type: 'text', nullable: true })
   coverImage: string | null;
 
