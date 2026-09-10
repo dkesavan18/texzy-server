@@ -45,7 +45,7 @@ export class ProductsService {
 
   async findAllByUser(userId: string, take = 100) {
     const products = await this.productsRepository.find({
-      where: { userId, isActive: true },
+      where: { userId },
       take,
       order: { productId: 'DESC' },
       relations: { media: true },
@@ -161,6 +161,18 @@ export class ProductsService {
     }
 
     product.status = PRODUCT_STATUS.ACTIVE;
+    product.isActive = true;
+    product.updatedAt = dbTimetzNow();
+    product.lastActivityAt = new Date();
+    const saved = await this.productsRepository.save(product);
+    return this.serialize(saved);
+  }
+
+  /** Soft-hide from buyers while keeping the product in the seller catalogue. */
+  async setActive(userId: string, productId: string, isActive: boolean) {
+    const product = await this.findProductOrThrow(productId);
+    this.assertOwner(product, userId, isActive ? 'activate' : 'deactivate');
+    product.isActive = isActive;
     product.updatedAt = dbTimetzNow();
     product.lastActivityAt = new Date();
     const saved = await this.productsRepository.save(product);
@@ -168,12 +180,8 @@ export class ProductsService {
   }
 
   async remove(userId: string, productId: string) {
-    const product = await this.findProductOrThrow(productId);
-    this.assertOwner(product, userId, 'delete');
-    product.isActive = false;
-    product.updatedAt = dbTimetzNow();
-    product.lastActivityAt = new Date();
-    await this.productsRepository.save(product);
+    // Soft-delete = inactive (still listed in mine; hidden from buyers).
+    await this.setActive(userId, productId, false);
     return { success: true };
   }
 

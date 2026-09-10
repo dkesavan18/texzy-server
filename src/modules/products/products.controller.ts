@@ -102,10 +102,29 @@ export class ProductsController {
     return this.productsService.publish(user.userId, id);
   }
 
+  @Post(':id/activate')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Make product visible to buyers (isActive = true)' })
+  activate(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.productsService.setActive(user.userId, id, true);
+  }
+
+  @Post(':id/deactivate')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary:
+      'Hide product from buyers while keeping it in the seller catalogue (isActive = false)',
+  })
+  deactivate(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.productsService.setActive(user.userId, id, false);
+  }
+
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Soft-delete product' })
+  @ApiOperation({ summary: 'Soft-delete product (sets inactive — same as deactivate)' })
   remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.productsService.remove(user.userId, id);
   }

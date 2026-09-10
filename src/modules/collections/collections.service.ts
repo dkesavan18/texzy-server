@@ -6,7 +6,6 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { R2StorageService } from '../../common/storage/r2-storage.service';
 import { dbTimetzNow } from '../../common/utils/auth.utils';
 import { Category, Collection } from '../../database/entities';
 import { CreateCollectionDto, UpdateCollectionDto } from './dto/collection.dto';
@@ -18,7 +17,6 @@ export class CollectionsService {
     private readonly collectionsRepository: Repository<Collection>,
     @InjectRepository(Category)
     private readonly categoriesRepository: Repository<Category>,
-    private readonly storageService: R2StorageService,
   ) {}
 
   findAll(take = 50) {
@@ -31,7 +29,7 @@ export class CollectionsService {
 
   findAllByUser(userId: string, take = 100) {
     return this.collectionsRepository.find({
-      where: { userId, isActive: true },
+      where: { userId },
       take,
       order: { collectionId: 'DESC' },
     });
@@ -51,7 +49,7 @@ export class CollectionsService {
     const collection = await this.collectionsRepository.findOne({
       where: { collectionId },
     });
-    if (!collection || collection.isActive === false) {
+    if (!collection) {
       throw new NotFoundException(`Collection ${collectionId} not found`);
     }
     if (collection.userId && collection.userId !== userId) {
@@ -63,13 +61,14 @@ export class CollectionsService {
   async create(userId: string, dto: CreateCollectionDto) {
     const collectionType = await this.resolveCollectionType(dto.collectionCategoryId);
     const now = dbTimetzNow();
+    // Created inactive (draft) until the seller publishes from the preview screen.
     return this.collectionsRepository.save(
       this.collectionsRepository.create({
         ...dto,
         collectionCategoryId: collectionType.categoryId,
         collectionTitle: collectionType.categoryName,
         userId,
-        isActive: true,
+        isActive: false,
         createdAt: now,
         updatedAt: now,
       }),
@@ -110,25 +109,21 @@ export class CollectionsService {
     };
   }
 
-  async remove(userId: string, collectionId: string) {
-    const collection = await this.findOneMine(userId, collectionId);
-
-    await this.deleteCoverFromStorage(collection.coverImageUrl);
-
-    collection.isActive = false;
-    collection.coverImageUrl = null;
-    collection.updatedAt = dbTimetzNow();
-    await this.collectionsRepository.save(collection);
-    return { success: true };
+  /** Publish collection so buyers can see it. */
+  async publish(userId: string, collectionId: string) {
+    return this.setActive(userId, collectionId, true);
   }
 
-  private async deleteCoverFromStorage(coverImageUrl: string | null) {
-    if (!coverImageUrl) {
-      return;
-    }
-    const key = this.storageService.getKeyFromUrl(coverImageUrl);
-    if (key) {
-      await this.storageService.deleteObject(key).catch(() => undefined);
-    }
+  async setActive(userId: string, collectionId: string, isActive: boolean) {
+    const collection = await this.findOneMine(userId, collectionId);
+    collection.isActive = isActive;
+    collection.updatedAt = dbTimetzNow();
+    return this.collectionsRepository.save(collection);
+  }
+
+  async remove(userId: string, collectionId: string) {
+    // Soft-delete = inactive; keep cover so the seller can reactivate later.
+    await this.setActive(userId, collectionId, false);
+    return { success: true };
   }
 }

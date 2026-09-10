@@ -68,10 +68,36 @@ export class CollectionsController {
     return this.collectionsService.update(user.userId, id, dto);
   }
 
+  @Post(':id/publish')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Publish collection (visible to buyers)' })
+  publish(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.collectionsService.publish(user.userId, id);
+  }
+
+  @Post(':id/activate')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Activate collection (visible to buyers)' })
+  activate(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.collectionsService.setActive(user.userId, id, true);
+  }
+
+  @Post(':id/deactivate')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Deactivate collection (hidden from buyers, kept in seller catalogue)',
+  })
+  deactivate(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.collectionsService.setActive(user.userId, id, false);
+  }
+
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Soft-delete collection and remove cover image from storage' })
+  @ApiOperation({ summary: 'Soft-delete collection (sets inactive — same as deactivate)' })
   remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.collectionsService.remove(user.userId, id);
   }
