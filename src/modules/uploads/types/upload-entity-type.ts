@@ -3,7 +3,11 @@ export type JunctionEntityType = 'product' | 'need' | 'need-response';
 
 /** Single-field types: one plain URL column, no thumbnail column in the existing schema. */
 export type SingleFieldEntityType =
-  'collection-cover' | 'profile-logo' | 'profile-cover' | 'order-item-delivery';
+  | 'collection-cover'
+  | 'profile-logo'
+  | 'profile-cover'
+  | 'profile-website-logo'
+  | 'order-item-delivery';
 
 export type UploadEntityType = JunctionEntityType | SingleFieldEntityType;
 
@@ -17,6 +21,7 @@ export const SINGLE_FIELD_ENTITY_TYPES: SingleFieldEntityType[] = [
   'collection-cover',
   'profile-logo',
   'profile-cover',
+  'profile-website-logo',
   'order-item-delivery',
 ];
 

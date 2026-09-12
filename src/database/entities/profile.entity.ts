@@ -79,6 +79,26 @@ export class Profile {
   @Column({ name: 'profile_url', type: 'text', nullable: true })
   profileUrl: string | null;
 
+  @Column({ name: 'whatsapp_url', type: 'text', nullable: true })
+  whatsappUrl: string | null;
+
+  @Column({ name: 'instagram_url', type: 'text', nullable: true })
+  instagramUrl: string | null;
+
+  @Column({ name: 'facebook_url', type: 'text', nullable: true })
+  facebookUrl: string | null;
+
+  @Column({ name: 'website_url', type: 'text', nullable: true })
+  websiteUrl: string | null;
+
+  /** Optional custom icon for the website button. Falls back to a default globe icon. */
+  @Column({ name: 'website_logo', type: 'text', nullable: true })
+  websiteLogo: string | null;
+
+  /** Seller-defined service tags shown on the public profile. */
+  @Column({ name: 'tags', type: 'jsonb', nullable: true })
+  tags: string[] | null;
+
   @ManyToOne(() => User, (user) => user.profiles, { nullable: true })
   @JoinColumn({ name: 'user_id' })
   user: User | null;

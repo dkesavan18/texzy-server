@@ -251,6 +251,14 @@ export class UploadsService {
         await this.profilesRepository.save(profile);
         return { success: true };
       }
+      case 'profile-website-logo': {
+        const profile = await this.getOrCreateProfile(user.userId);
+        await this.deleteOldObjectIfAny(profile.websiteLogo);
+        profile.websiteLogo = null;
+        profile.updatedAt = dbTimetzNow();
+        await this.profilesRepository.save(profile);
+        return { success: true };
+      }
       case 'collection-cover': {
         const collection = await this.requireEntity(
           this.collectionsRepository,
@@ -336,7 +344,8 @@ export class UploadsService {
         return { scopeId: collection.collectionId };
       }
       case 'profile-logo':
-      case 'profile-cover': {
+      case 'profile-cover':
+      case 'profile-website-logo': {
         const profile = await this.getOrCreateProfile(user.userId);
         return { scopeId: user.userId, profile };
       }
@@ -429,6 +438,8 @@ export class UploadsService {
         return `profiles/${scopeId}/logo-${uuid}.${ext}`;
       case 'profile-cover':
         return `profiles/${scopeId}/cover-${uuid}.${ext}`;
+      case 'profile-website-logo':
+        return `profiles/${scopeId}/website-${uuid}.${ext}`;
       case 'order-item-delivery':
         return `order-items/${scopeId}/delivery-${uuid}.${ext}`;
     }
@@ -450,6 +461,7 @@ export class UploadsService {
         return `collections/${scopeId}`;
       case 'profile-logo':
       case 'profile-cover':
+      case 'profile-website-logo':
         return `profiles/${scopeId}`;
       case 'order-item-delivery':
         return `order-items/${scopeId}`;
@@ -656,6 +668,14 @@ export class UploadsService {
         target.updatedAt = now;
         const saved = await this.profilesRepository.save(target);
         return { entityType, url: saved.coverImage, profile: saved };
+      }
+      case 'profile-website-logo': {
+        const target = profile as Profile;
+        await this.deleteOldObjectIfAny(target.websiteLogo);
+        target.websiteLogo = mediaUrl;
+        target.updatedAt = now;
+        const saved = await this.profilesRepository.save(target);
+        return { entityType, url: saved.websiteLogo, profile: saved };
       }
       case 'collection-cover': {
         const collection = await this.requireEntity(

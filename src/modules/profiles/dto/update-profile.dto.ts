@@ -94,4 +94,45 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsString()
   location?: string;
+
+  @ApiPropertyOptional({ description: 'WhatsApp number or wa.me / chat link' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  whatsappUrl?: string;
+
+  @ApiPropertyOptional({ description: 'Instagram profile URL or handle' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  instagramUrl?: string;
+
+  @ApiPropertyOptional({ description: 'Facebook page URL' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  facebookUrl?: string;
+
+  @ApiPropertyOptional({ description: 'Business website URL' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  websiteUrl?: string;
+
+  @ApiPropertyOptional({ description: 'Optional custom website icon image URL' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  websiteLogo?: string;
+
+  @ApiPropertyOptional({
+    description: 'Service tags shown on the profile (e.g. Fast Delivery)',
+    type: [String],
+    example: ['Fast Delivery', 'Bulk order Welcome'],
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  @MaxLength(40, { each: true })
+  tags?: string[];
 }
