@@ -20,8 +20,16 @@ export class BuyNowDto {
   @Min(1)
   quantity?: number;
 
-  @ApiProperty({ type: ShippingAddressDto })
+  @ApiPropertyOptional({
+    description: 'addresses.address_id — a saved delivery address. Provide this OR shippingAddress.',
+  })
+  @IsOptional()
+  @IsString()
+  addressId?: string;
+
+  @ApiPropertyOptional({ type: ShippingAddressDto })
+  @IsOptional()
   @ValidateNested()
   @Type(() => ShippingAddressDto)
-  shippingAddress: ShippingAddressDto;
+  shippingAddress?: ShippingAddressDto;
 }

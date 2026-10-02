@@ -20,6 +20,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import type { OrderItemStatusValue } from './constants/order-status.constant';
 import { BuyNowDto } from './dto/buy-now.dto';
 import { CheckoutDto } from './dto/checkout.dto';
+import { CreateReturnRequestDto } from './dto/create-return-request.dto';
 import { UpdateOrderItemStatusDto } from './dto/update-order-item-status.dto';
 import { OrdersService } from './orders.service';
 
@@ -46,6 +47,19 @@ export class OrdersController {
   })
   checkout(@CurrentUser() user: AuthUser, @Body() dto: CheckoutDto) {
     return this.ordersService.checkout(user.userId, dto);
+  }
+
+  @Post('items/:id/return')
+  @ApiOperation({
+    summary:
+      'Buyer requests a return on one of their own delivered order items',
+  })
+  requestReturn(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body() dto: CreateReturnRequestDto,
+  ) {
+    return this.ordersService.requestReturn(user.userId, id, dto);
   }
 
   @Get('seller/items')

@@ -8,6 +8,7 @@ import {
   Payment,
   Product,
 } from '../../database/entities';
+import { AddressesModule } from '../addresses/addresses.module';
 import { CartModule } from '../cart/cart.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { OrdersController } from './orders.controller';
@@ -17,6 +18,7 @@ import { OrdersService } from './orders.service';
   imports: [
     RazorpayModule,
     CartModule,
+    AddressesModule,
     NotificationsModule,
     TypeOrmModule.forFeature([
       Order,

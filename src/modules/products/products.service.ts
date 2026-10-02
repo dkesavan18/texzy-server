@@ -26,7 +26,8 @@ export class ProductsService {
   ) {}
 
   /**
-   * List endpoints intentionally skip the variants relation — variants only matter for a single product's add/edit/detail view.
+   * Public / owner lists include media + variants so product cards can show
+   * colour swatches and variant pricing without N+1 detail fetches.
    * When `excludeUserId` is set (authenticated seller browsing explore), that user's own products are omitted.
    */
   async findAll(take = 50, excludeUserId?: string) {
@@ -38,7 +39,7 @@ export class ProductsService {
       },
       take,
       order: { productId: 'DESC' },
-      relations: { media: true },
+      relations: { media: true, variants: true },
     });
     return products.map((product) => this.serialize(product));
   }
@@ -48,7 +49,7 @@ export class ProductsService {
       where: { userId },
       take,
       order: { productId: 'DESC' },
-      relations: { media: true },
+      relations: { media: true, variants: true },
     });
     return products.map((product) => this.serialize(product));
   }

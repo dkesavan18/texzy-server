@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import configuration from './config/configuration';
 import { DatabaseModule } from './database/database.module';
+import { AddressesModule } from './modules/addresses/addresses.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { CartModule } from './modules/cart/cart.module';
 import { CategoriesModule } from './modules/categories/categories.module';
@@ -47,6 +48,7 @@ import { VerificationsModule } from './modules/verifications/verifications.modul
     DealsModule,
     UploadsModule,
     CartModule,
+    AddressesModule,
     OrdersModule,
     PaymentsModule,
     NotificationsModule,

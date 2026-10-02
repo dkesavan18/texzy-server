@@ -48,6 +48,12 @@ export const ORDER_ITEM_STATUS = {
   OUT_FOR_DELIVERY: 'out_for_delivery',
   DELIVERED: 'delivered',
   CANCELLED: 'cancelled',
+  /** Buyer-initiated on a delivered item — see OrdersService.requestReturn. */
+  RETURN_REQUESTED: 'return_requested',
+  /** Seller-driven — moved via the same PATCH .../status endpoint sellers already use. */
+  RETURN_APPROVED: 'return_approved',
+  RETURN_REJECTED: 'return_rejected',
+  RETURNED: 'returned',
 } as const;
 
 export type OrderItemStatusValue =
@@ -80,6 +86,27 @@ export const ORDER_ITEM_ALLOWED_TRANSITIONS: Record<
     ORDER_ITEM_STATUS.DELIVERED,
   ],
   [ORDER_ITEM_STATUS.OUT_FOR_DELIVERY]: [ORDER_ITEM_STATUS.DELIVERED],
+  // Delivered -> return_requested is buyer-initiated via POST /orders/items/:id/return,
+  // not this seller transition table — kept empty here on purpose.
   [ORDER_ITEM_STATUS.DELIVERED]: [],
   [ORDER_ITEM_STATUS.CANCELLED]: [],
+  [ORDER_ITEM_STATUS.RETURN_REQUESTED]: [
+    ORDER_ITEM_STATUS.RETURN_APPROVED,
+    ORDER_ITEM_STATUS.RETURN_REJECTED,
+  ],
+  [ORDER_ITEM_STATUS.RETURN_APPROVED]: [ORDER_ITEM_STATUS.RETURNED],
+  [ORDER_ITEM_STATUS.RETURN_REJECTED]: [],
+  [ORDER_ITEM_STATUS.RETURNED]: [],
 };
+
+/** Return reasons a buyer may pick from — mirrors the frontend's ORDER_RETURN_REASONS list. */
+export const ORDER_RETURN_REASONS = [
+  'damaged',
+  'wrong_item',
+  'quality',
+  'size',
+  'changed_mind',
+  'other',
+] as const;
+
+export type OrderReturnReason = (typeof ORDER_RETURN_REASONS)[number];

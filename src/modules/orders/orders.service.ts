@@ -16,6 +16,7 @@ import {
   Payment,
   Product,
 } from '../../database/entities';
+import { AddressesService } from '../addresses/addresses.service';
 import { CartService } from '../cart/cart.service';
 import {
   NOTIFICATION_REFERENCE_TYPE,
@@ -36,6 +37,7 @@ import {
 } from './constants/order-status.constant';
 import { BuyNowDto } from './dto/buy-now.dto';
 import { CheckoutDto } from './dto/checkout.dto';
+import { CreateReturnRequestDto } from './dto/create-return-request.dto';
 import { UpdateOrderItemStatusDto } from './dto/update-order-item-status.dto';
 
 const CUSTOMER_ORDER_RELATIONS = {
@@ -61,7 +63,39 @@ export class OrdersService {
     private readonly razorpayService: RazorpayService,
     private readonly cartService: CartService,
     private readonly notificationsService: NotificationsService,
+    private readonly addressesService: AddressesService,
   ) {}
+
+  /**
+   * Buy Now / Checkout accept either a saved `addressId` or a raw `shippingAddress` object —
+   * exactly one must be provided. A saved address is only ever read here, never mutated;
+   * orders always snapshot the resolved fields onto `orders.shipping_address`.
+   */
+  private async resolveShippingAddress(
+    userId: string,
+    addressId: string | undefined,
+    shippingAddress: Record<string, unknown> | undefined,
+  ): Promise<Record<string, unknown>> {
+    if (addressId) {
+      const address = await this.addressesService.requireOwned(userId, addressId);
+      return {
+        fullName: address.fullName,
+        phone: address.phone,
+        addressLine1: address.addressLine1,
+        addressLine2: address.addressLine2,
+        city: address.city,
+        state: address.state,
+        pincode: address.pincode,
+        country: address.country,
+      };
+    }
+    if (shippingAddress) {
+      return shippingAddress;
+    }
+    throw new BadRequestException(
+      'Provide either a saved addressId or a shippingAddress',
+    );
+  }
 
   private static readonly ITEM_STATUS_NOTIFICATION: Partial<
     Record<OrderItemStatusValue, { type: NotificationTypeValue; label: string }>
@@ -77,6 +111,18 @@ export class OrdersService {
     },
     delivered: { type: NOTIFICATION_TYPE.ORDER_DELIVERED, label: 'delivered' },
     cancelled: { type: NOTIFICATION_TYPE.ORDER_CANCELLED, label: 'cancelled' },
+    return_approved: {
+      type: NOTIFICATION_TYPE.ORDER_RETURN_UPDATE,
+      label: 'return approved',
+    },
+    return_rejected: {
+      type: NOTIFICATION_TYPE.ORDER_RETURN_UPDATE,
+      label: 'return declined',
+    },
+    returned: {
+      type: NOTIFICATION_TYPE.ORDER_RETURN_UPDATE,
+      label: 'returned — refund on the way',
+    },
   };
 
   /**
@@ -114,9 +160,15 @@ export class OrdersService {
     const unitPrice = product.price;
     const totalPrice = Math.round(unitPrice * quantity * 100) / 100;
 
+    const shippingAddress = await this.resolveShippingAddress(
+      userId,
+      dto.addressId,
+      dto.shippingAddress as unknown as Record<string, unknown> | undefined,
+    );
+
     return this.createOrderWithItems(
       userId,
-      dto.shippingAddress as unknown as Record<string, unknown>,
+      shippingAddress,
       [
         {
           productId: product.productId,
@@ -150,9 +202,15 @@ export class OrdersService {
           100,
       ) / 100;
 
+    const shippingAddress = await this.resolveShippingAddress(
+      userId,
+      dto.addressId,
+      dto.shippingAddress as unknown as Record<string, unknown> | undefined,
+    );
+
     return this.createOrderWithItems(
       userId,
-      dto.shippingAddress as unknown as Record<string, unknown>,
+      shippingAddress,
       items,
       totalAmount,
       ORDER_SOURCE.CART,
@@ -279,6 +337,80 @@ export class OrdersService {
       throw new ForbiddenException('You can only view your own orders');
     }
     return this.toOrderResponse(order);
+  }
+
+  /**
+   * Buyer requests a return on a delivered item. Only the buyer who placed the order may
+   * do this, and only while the item is currently 'delivered' — approving/rejecting the
+   * request afterwards is a seller action via the existing `updateItemStatus` endpoint
+   * (return_requested -> return_approved | return_rejected -> returned).
+   */
+  async requestReturn(
+    userId: string,
+    orderItemId: string,
+    dto: CreateReturnRequestDto,
+  ) {
+    const item = await this.orderItemsRepository.findOne({
+      where: { orderItemId },
+      relations: {
+        order: true,
+        product: { media: true },
+        variant: true,
+        statusHistory: true,
+      },
+    });
+    if (!item) {
+      throw new NotFoundException(`Order item ${orderItemId} not found`);
+    }
+    if (item.order?.userId !== userId) {
+      throw new ForbiddenException(
+        'You can only request a return on your own order items',
+      );
+    }
+    if (item.fulfillmentStatus !== ORDER_ITEM_STATUS.DELIVERED) {
+      throw new BadRequestException(
+        'Only delivered items can be returned',
+      );
+    }
+
+    const now = new Date();
+    item.fulfillmentStatus = ORDER_ITEM_STATUS.RETURN_REQUESTED;
+    item.returnReason = dto.reason;
+    item.returnNote = dto.note ?? null;
+    item.updatedAt = now;
+    await this.orderItemsRepository.save(item);
+    await this.orderItemStatusRepository.save(
+      this.orderItemStatusRepository.create({
+        orderItemId: item.orderItemId,
+        status: ORDER_ITEM_STATUS.RETURN_REQUESTED,
+        note: dto.note ?? null,
+        changedBy: userId,
+        createdAt: now,
+      }),
+    );
+
+    if (item.product?.userId) {
+      void this.notificationsService.notify({
+        userId: item.product.userId,
+        type: NOTIFICATION_TYPE.ORDER_RETURN_UPDATE,
+        title: 'Return requested',
+        message: `A buyer requested a return for order #${item.order.orderNumber ?? item.orderId}.`,
+        referenceId: item.orderItemId,
+        referenceType: NOTIFICATION_REFERENCE_TYPE.ORDER_ITEM,
+        data: { link: `/catalogues/orders/${item.orderItemId}` },
+      });
+    }
+
+    const refreshed = await this.orderItemsRepository.findOne({
+      where: { orderItemId },
+      relations: {
+        order: true,
+        product: { media: true },
+        variant: true,
+        statusHistory: true,
+      },
+    });
+    return refreshed ?? item;
   }
 
   // ---------------------------------------------------------------------

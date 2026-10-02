@@ -84,6 +84,13 @@ export class OrderItem {
   @Column({ name: 'cancelled_at', type: 'timestamptz', nullable: true })
   cancelledAt: Date | null;
 
+  /** Buyer-supplied reason when `fulfillmentStatus` moves into the return_* pipeline. */
+  @Column({ name: 'return_reason', type: 'varchar', length: 40, nullable: true })
+  returnReason: string | null;
+
+  @Column({ name: 'return_note', type: 'text', nullable: true })
+  returnNote: string | null;
+
   @Column({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 

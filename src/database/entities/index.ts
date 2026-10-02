@@ -1,3 +1,4 @@
+import { Address } from './address.entity';
 import { CartItem } from './cart-item.entity';
 import { Cart } from './cart.entity';
 import { CategoryType } from './category-type.entity';
@@ -58,9 +59,11 @@ export const entities = [
   Payment,
   Notification,
   NotificationToken,
+  Address,
 ];
 
 export {
+  Address,
   Cart,
   CartItem,
   CategoryType,
