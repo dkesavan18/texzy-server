@@ -14,6 +14,10 @@ export class CategoryType {
   })
   categoryType: string | null;
 
+  /** Stable UPPER_SNAKE identifier, e.g. PRODUCT_CATEGORY, COLOUR. */
+  @Column({ name: 'code', type: 'varchar', length: 60, nullable: true })
+  code: string | null;
+
   @Column({ name: 'created_at', type: 'timetz', nullable: true })
   createdAt: string | null;
 

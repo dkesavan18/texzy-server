@@ -2,6 +2,7 @@ import { Address } from './address.entity';
 import { CartItem } from './cart-item.entity';
 import { Cart } from './cart.entity';
 import { CategoryType } from './category-type.entity';
+import { CategoryInputMapping } from './category-input-mapping.entity';
 import { Category } from './category.entity';
 import { Collection } from './collection.entity';
 import { ConversationEvent } from './conversation-event.entity';
@@ -19,7 +20,10 @@ import { OrderItemStatus } from './order-item-status.entity';
 import { OrderItem } from './order-item.entity';
 import { Order } from './order.entity';
 import { Payment } from './payment.entity';
+import { ProductAttributeValue } from './product-attribute-value.entity';
 import { ProductMedia } from './product-media.entity';
+import { ProductPriceTier } from './product-price-tier.entity';
+import { ProductVariantAttribute } from './product-variant-attribute.entity';
 import { ProductVariant } from './product-variant.entity';
 import { Product } from './product.entity';
 import { Profile } from './profile.entity';
@@ -40,6 +44,10 @@ export const entities = [
   Product,
   ProductMedia,
   ProductVariant,
+  ProductVariantAttribute,
+  ProductAttributeValue,
+  ProductPriceTier,
+  CategoryInputMapping,
   Need,
   NeedMedia,
   NeedResponse,
@@ -66,6 +74,7 @@ export {
   Address,
   Cart,
   CartItem,
+  CategoryInputMapping,
   CategoryType,
   Category,
   Collection,
@@ -84,8 +93,11 @@ export {
   OrderItem,
   OrderItemStatus,
   Payment,
+  ProductAttributeValue,
   ProductMedia,
+  ProductPriceTier,
   Product,
+  ProductVariantAttribute,
   ProductVariant,
   Profile,
   ResponseMedia,

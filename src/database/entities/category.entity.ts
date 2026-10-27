@@ -35,6 +35,28 @@ export class Category {
   @Column({ name: 'category_name', type: 'varchar', nullable: true })
   categoryName: string | null;
 
+  /** Stable UPPER_SNAKE identifier, unique within a category type. */
+  @Column({ name: 'code', type: 'varchar', length: 80, nullable: true })
+  code: string | null;
+
+  /** Parent category (product groups -> product types, base colour -> shades). */
+  @Column({ name: 'parent_id', type: 'bigint', nullable: true })
+  parentId: string | null;
+
+  @Column({ name: 'display_order', type: 'int', default: 0 })
+  displayOrder: number;
+
+  /** Option metadata, e.g. `{ "hex": "E0218A" }` for colours. */
+  @Column({ name: 'metadata', type: 'jsonb', nullable: true })
+  metadata: Record<string, unknown> | null;
+
+  @ManyToOne(() => Category, (category) => category.children, { nullable: true })
+  @JoinColumn({ name: 'parent_id' })
+  parent: Category | null;
+
+  @OneToMany(() => Category, (category) => category.parent)
+  children: Category[];
+
   @ManyToOne(() => CategoryType, (type) => type.categories, { nullable: true })
   @JoinColumn({ name: 'category_type_id' })
   categoryType: CategoryType | null;

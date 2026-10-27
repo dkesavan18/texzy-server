@@ -208,7 +208,7 @@ export class DealsService {
     const unitPrice = product.price ?? null;
     const quantity = dto.quantity;
     const images = (product.media ?? [])
-      .filter((item) => item.isActive !== false)
+      .filter((item) => item.isActive !== false && item.mediaType !== 'video')
       .map((item) => item.mediaUrl ?? item.thumbnailUrl)
       .filter((url): url is string => Boolean(url));
 

@@ -220,7 +220,10 @@ export class PaymentsService {
       .execute();
   }
 
-  /** Confirms the order and reduces stock — only ever called once per order (guarded above). */
+  /**
+   * Confirms the order, reduces stock, and notifies each seller — only ever called once
+   * per order (guarded by the payment status transition above).
+   */
   private async confirmOrderAndReduceStock(orderId: string): Promise<void> {
     const orderBeforeUpdate = await this.ordersRepository.findOne({
       where: { orderId },
@@ -253,34 +256,29 @@ export class PaymentsService {
         where: { productId: item.productId },
       });
 
-      const result = await this.productsRepository
+      // Reduce tracked stock after payment. GREATEST keeps quantity from going negative
+      // if two checkouts race; NULL quantity (untracked) is left unchanged.
+      const stockResult = await this.productsRepository
         .createQueryBuilder()
         .update(Product)
         .set({
-          quantity: () => 'quantity - :qty',
+          quantity: () => 'GREATEST(quantity - :qty, 0)',
+          ordersCount: () => 'COALESCE(orders_count, 0) + 1',
           updatedAt: dbTimetzNow(),
+          lastActivityAt: () => 'NOW()',
         })
         .where('product_id = :productId', { productId: item.productId })
-        .andWhere('quantity >= :qty', { qty: item.quantity })
+        .andWhere('quantity IS NOT NULL')
         .setParameter('qty', item.quantity)
         .execute();
 
-      // Seller only learns about a paid order now — an unpaid/failed order never reaches them.
-      if (product?.userId) {
-        void this.notificationsService.notify({
-          userId: product.userId,
-          type: NOTIFICATION_TYPE.ORDER_RECEIVED,
-          title: 'New order received',
-          message: `${item.quantity} x ${product.productName ?? 'product'} — order #${orderBeforeUpdate?.orderNumber ?? orderId}`,
-          referenceId: item.orderItemId,
-          referenceType: NOTIFICATION_REFERENCE_TYPE.ORDER_ITEM,
-          data: { link: `/catalogues/orders/${item.orderItemId}` },
-        });
-      }
-
-      if (result.affected !== 1) {
+      if (stockResult.affected !== 1) {
         this.logger.warn(
-          `Stock for product ${item.productId} was insufficient or untracked when confirming order ${orderId} — skipped decrement`,
+          `Stock for product ${item.productId} is untracked (NULL) when confirming order ${orderId} — quantity not decremented`,
+        );
+      } else {
+        this.logger.log(
+          `Reduced stock for product ${item.productId} by ${item.quantity} after order ${orderId}`,
         );
       }
 
@@ -289,16 +287,39 @@ export class PaymentsService {
           .createQueryBuilder()
           .update(ProductVariant)
           .set({
-            quantity: () => 'quantity - :qty',
+            quantity: () => 'GREATEST(quantity - :qty, 0)',
             updatedAt: new Date(),
           })
           .where('product_variant_id = :variantId', {
             variantId: item.productVariantId,
           })
-          .andWhere('quantity >= :qty', { qty: item.quantity })
+          .andWhere('quantity IS NOT NULL')
           .setParameter('qty', item.quantity)
           .execute()
-          .catch(() => undefined);
+          .catch((error) => {
+            this.logger.warn(
+              `Variant stock decrement failed for ${item.productVariantId} on order ${orderId}: ${
+                error instanceof Error ? error.message : String(error)
+              }`,
+            );
+          });
+      }
+
+      // Seller only learns about a paid order — unpaid/failed checkouts never notify.
+      if (product?.userId) {
+        void this.notificationsService.notify({
+          userId: product.userId,
+          type: NOTIFICATION_TYPE.ORDER_RECEIVED,
+          title: 'New order received',
+          message: `${item.quantity} × ${product.productName ?? 'product'} — order #${orderBeforeUpdate?.orderNumber ?? orderId}`,
+          referenceId: item.orderItemId,
+          referenceType: NOTIFICATION_REFERENCE_TYPE.ORDER_ITEM,
+          data: { link: `/catalogues/orders/${item.orderItemId}` },
+        });
+      } else {
+        this.logger.warn(
+          `No seller userId on product ${item.productId} — skipped ORDER_RECEIVED for order ${orderId}`,
+        );
       }
     }
   }

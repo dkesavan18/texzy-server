@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -9,7 +10,13 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOkResponse,
+  ApiOperation,
+  ApiQuery,
+  ApiTags,
+} from '@nestjs/swagger';
 import { AdminRoleGuard } from '../../common/guards/admin-role.guard';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CategoriesService } from './categories.service';
@@ -18,7 +25,7 @@ import {
   CreateCategoryTypeDto,
   UpdateCategoryDto,
 } from './dto/category.dto';
-import { CategoryListResponseDto } from './dto/category-list.dto';
+import { CategoryListResponseDto, CategoryOptionDto } from './dto/category-list.dto';
 
 @ApiTags('categories')
 @Controller('categories')
@@ -49,11 +56,40 @@ export class CategoriesController {
     return this.categoriesService.findAllGrouped();
   }
 
+  @Get('options')
+  @ApiOperation({
+    summary: 'List the dropdown options of one option set (public)',
+    description:
+      'type = category type code, e.g. COLOUR, MATERIAL, ZARI_TYPE, PRODUCT_CATEGORY. ' +
+      'parentId returns only the children of one option; rootOnly=true returns only top-level options.',
+  })
+  @ApiQuery({ name: 'type', required: true, example: 'COLOUR' })
+  @ApiQuery({ name: 'parentId', required: false })
+  @ApiQuery({ name: 'rootOnly', required: false, type: Boolean })
+  @ApiOkResponse({ type: [CategoryOptionDto] })
+  findOptions(
+    @Query('type') type?: string,
+    @Query('parentId') parentId?: string,
+    @Query('rootOnly') rootOnly?: string,
+  ) {
+    if (!type?.trim()) {
+      throw new BadRequestException('type is required');
+    }
+    if (parentId !== undefined && !/^\d+$/.test(parentId)) {
+      throw new BadRequestException('parentId must be a number');
+    }
+    return this.categoriesService.findOptions(type, {
+      parentId,
+      rootOnly: rootOnly === 'true',
+    });
+  }
+
   @Get()
   @ApiOperation({
     summary: 'List categories (public)',
     description:
-      'Pass ?type=business_type, business_category, business_mode, product_category, etc.',
+      'Pass ?type=business_type, business_category, business_mode, PRODUCT_CATEGORY, COLOUR, etc. ' +
+      '(exact category type name or code, case-insensitive).',
   })
   findAll(@Query('type') type?: string) {
     return this.categoriesService.findAll(type);

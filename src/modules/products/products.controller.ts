@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -32,11 +33,23 @@ export class ProductsController {
     return this.productsService.findAll(50, user?.userId);
   }
 
+  @Get('search')
+  @UseGuards(OptionalJwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary:
+      'Search published products by name, description, category, and variant (ranked on the server)',
+  })
+  search(@Query('q') q = '', @CurrentUser() user?: AuthUser | null) {
+    return this.productsService.search(q, user?.userId);
+  }
+
   @Get('mine')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({
-    summary: "List the current user's own products (drafts and published)",
+    summary:
+      "List the current user's own products (drafts, active, and inactive — excludes soft-deleted)",
   })
   findMine(@CurrentUser() user: AuthUser) {
     return this.productsService.findAllByUser(user.userId);
@@ -124,7 +137,10 @@ export class ProductsController {
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Soft-delete product (sets inactive — same as deactivate)' })
+  @ApiOperation({
+    summary:
+      'Soft-delete product (keeps the row; hidden from Active/Inactive lists and from buyers)',
+  })
   remove(@CurrentUser() user: AuthUser, @Param('id') id: string) {
     return this.productsService.remove(user.userId, id);
   }

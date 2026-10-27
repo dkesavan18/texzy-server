@@ -47,10 +47,14 @@ export interface UploadedFilePayload {
   size: number;
 }
 
+const MAX_PRODUCT_VIDEOS = 2;
+
 @Injectable()
 export class UploadsService {
   private readonly maxFileSizeBytes: number;
   private readonly allowedMimeTypes: string[];
+  private readonly maxVideoSizeBytes: number;
+  private readonly allowedVideoMimeTypes: string[];
   private readonly thumbnailMaxWidth: number;
   private readonly thumbnailQuality: number;
 
@@ -82,6 +86,12 @@ export class UploadsService {
     this.allowedMimeTypes = this.configService.get<string[]>(
       'storage.upload.allowedMimeTypes',
     ) as string[];
+    this.maxVideoSizeBytes = this.configService.get<number>(
+      'storage.upload.maxVideoSizeBytes',
+    ) as number;
+    this.allowedVideoMimeTypes = this.configService.get<string[]>(
+      'storage.upload.allowedVideoMimeTypes',
+    ) as string[];
     this.thumbnailMaxWidth = this.configService.get<number>(
       'storage.thumbnail.maxWidth',
     ) as number;
@@ -102,6 +112,7 @@ export class UploadsService {
       scopeId,
       dto.fileName,
       user.userId,
+      this.isVideoContentType(dto.contentType),
     );
     const uploadUrl = await this.storageService.getPresignedPutUrl(
       storageKey,
@@ -133,9 +144,12 @@ export class UploadsService {
   ) {
     this.assertAllowedContentType(file.mimetype);
 
-    if (file.size > this.maxFileSizeBytes) {
+    const sizeLimit = this.isVideoContentType(file.mimetype)
+      ? this.maxVideoSizeBytes
+      : this.maxFileSizeBytes;
+    if (file.size > sizeLimit) {
       throw new BadRequestException(
-        `File exceeds maximum size of ${this.maxFileSizeBytes} bytes`,
+        `File exceeds maximum size of ${sizeLimit} bytes`,
       );
     }
 
@@ -185,11 +199,17 @@ export class UploadsService {
         'Uploaded object not found in storage. Upload may have failed or expired.',
       );
     }
-    if (head.contentLength && head.contentLength > this.maxFileSizeBytes) {
+    const isVideo = this.isVideoStorageKey(dto.storageKey);
+    const confirmLimit = isVideo ? this.maxVideoSizeBytes : this.maxFileSizeBytes;
+    if (head.contentLength && head.contentLength > confirmLimit) {
       await this.storageService.deleteObject(dto.storageKey);
       throw new BadRequestException(
-        `File exceeds maximum allowed size of ${this.maxFileSizeBytes} bytes`,
+        `File exceeds maximum allowed size of ${confirmLimit} bytes`,
       );
+    }
+    if (isVideo && dto.entityType !== 'product') {
+      await this.storageService.deleteObject(dto.storageKey);
+      throw new BadRequestException('Videos can only be uploaded to products');
     }
 
     if (this.isJunctionType(dto.entityType)) {
@@ -421,13 +441,19 @@ export class UploadsService {
     scopeId: string,
     fileName: string,
     ownerId: string,
+    isVideo = false,
   ): string {
-    const ext = extname(fileName).replace('.', '').toLowerCase() || 'jpg';
+    const ext =
+      extname(fileName).replace('.', '').toLowerCase() ||
+      (isVideo ? 'mp4' : 'jpg');
     const uuid = randomUUID();
+    if (isVideo && entityType !== 'product') {
+      throw new BadRequestException('Videos can only be uploaded to products');
+    }
     switch (entityType) {
       case 'product':
-        // products/{user_id}/{product_id}/image-{uuid}.{ext}
-        return `products/${ownerId}/${scopeId}/image-${uuid}.${ext}`;
+        // products/{user_id}/{product_id}/image-{uuid}.{ext} | video-{uuid}.{ext}
+        return `products/${ownerId}/${scopeId}/${isVideo ? 'video' : 'image'}-${uuid}.${ext}`;
       case 'need':
         return `needs/${scopeId}/${uuid}.${ext}`;
       case 'need-response':
@@ -483,11 +509,21 @@ export class UploadsService {
   }
 
   private assertAllowedContentType(contentType: string) {
-    if (!this.allowedMimeTypes.includes(contentType)) {
+    const allowed = [...this.allowedMimeTypes, ...this.allowedVideoMimeTypes];
+    if (!allowed.includes(contentType)) {
       throw new BadRequestException(
-        `Content type ${contentType} is not allowed. Allowed types: ${this.allowedMimeTypes.join(', ')}`,
+        `Content type ${contentType} is not allowed. Allowed types: ${allowed.join(', ')}`,
       );
     }
+  }
+
+  private isVideoContentType(contentType: string): boolean {
+    return this.allowedVideoMimeTypes.includes(contentType);
+  }
+
+  private isVideoStorageKey(storageKey: string): boolean {
+    const fileName = storageKey.split('/').pop() ?? '';
+    return fileName.startsWith('video-');
   }
 
   private isJunctionType(
@@ -505,6 +541,10 @@ export class UploadsService {
     entityType: JunctionEntityType,
     scopeId: string,
   ) {
+    if (this.isVideoStorageKey(dto.storageKey)) {
+      // Videos are stored as-is: no thumbnail, never the cover image.
+      return this.createProductVideo(scopeId, dto);
+    }
     const thumbnailKey = this.storageService.deriveThumbnailKey(dto.storageKey);
     const originalBuffer = await this.storageService.getObjectBuffer(
       dto.storageKey,
@@ -552,9 +592,7 @@ export class UploadsService {
     thumbnailUrl: string,
     now: string,
   ) {
-    const existingCount = await this.productMediaRepository.count({
-      where: { productId, isActive: true },
-    });
+    const existingCount = await this.countActiveProductMedia(productId, false);
     if (dto.isPrimary && existingCount > 0) {
       await this.productMediaRepository.update(
         { productId, isPrimary: true },
@@ -563,7 +601,7 @@ export class UploadsService {
     }
     const media = this.productMediaRepository.create({
       productId,
-      mediaType: dto.mediaType ?? 'image',
+      mediaType: 'image',
       storageKey: dto.storageKey,
       mediaUrl,
       thumbnailUrl,
@@ -576,6 +614,45 @@ export class UploadsService {
     const saved = await this.productMediaRepository.save(media);
     await this.touchProductActivity(productId);
     return saved;
+  }
+
+  private async createProductVideo(productId: string, dto: ConfirmUploadDto) {
+    const existingVideos = await this.countActiveProductMedia(productId, true);
+    if (existingVideos >= MAX_PRODUCT_VIDEOS) {
+      await this.storageService
+        .deleteObject(dto.storageKey)
+        .catch(() => undefined);
+      throw new BadRequestException(
+        `A product can have at most ${MAX_PRODUCT_VIDEOS} videos`,
+      );
+    }
+    const now = dbTimetzNow();
+    const media = this.productMediaRepository.create({
+      productId,
+      mediaType: 'video',
+      storageKey: dto.storageKey,
+      mediaUrl: this.storageService.getPublicUrl(dto.storageKey),
+      thumbnailUrl: null,
+      displayOrder: existingVideos,
+      isPrimary: false,
+      isActive: true,
+      createdAt: now,
+      updatedAt: now,
+    });
+    const saved = await this.productMediaRepository.save(media);
+    await this.touchProductActivity(productId);
+    return saved;
+  }
+
+  private async countActiveProductMedia(
+    productId: string,
+    videos: boolean,
+  ): Promise<number> {
+    const rows = await this.productMediaRepository.find({
+      where: { productId, isActive: true },
+      select: { productMediaId: true, mediaType: true },
+    });
+    return rows.filter((row) => (row.mediaType === 'video') === videos).length;
   }
 
   private async createNeedMedia(

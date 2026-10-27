@@ -9,6 +9,8 @@ import {
 import { Category } from './category.entity';
 import { User } from './user.entity';
 import { ProductMedia } from './product-media.entity';
+import { ProductAttributeValue } from './product-attribute-value.entity';
+import { ProductPriceTier } from './product-price-tier.entity';
 import { ProductVariant } from './product-variant.entity';
 
 @Entity({ name: 'products' })
@@ -64,6 +66,35 @@ export class Product {
   @Column({ name: 'textile_attributes', type: 'jsonb', nullable: true })
   textileAttributes: Record<string, unknown> | null;
 
+  @Column({ name: 'sku', type: 'varchar', length: 100, nullable: true })
+  sku: string | null;
+
+  @Column({ name: 'hsn_code', type: 'varchar', length: 20, nullable: true })
+  hsnCode: string | null;
+
+  @Column({ name: 'gst_rate', type: 'float8', nullable: true })
+  gstRate: number | null;
+
+  @Column({ name: 'lead_time_days', type: 'int', nullable: true })
+  leadTimeDays: number | null;
+
+  @Column({ name: 'is_made_to_order', type: 'boolean', nullable: true })
+  isMadeToOrder: boolean | null;
+
+  @Column({ name: 'low_stock_threshold', type: 'int', nullable: true })
+  lowStockThreshold: number | null;
+
+  @Column({ name: 'wholesale_price', type: 'float8', nullable: true })
+  wholesalePrice: number | null;
+
+  /** Package weight in grams. */
+  @Column({ name: 'package_weight', type: 'float8', nullable: true })
+  packageWeight: number | null;
+
+  /** `{ length, width, height }` in centimetres. */
+  @Column({ name: 'package_dimensions', type: 'jsonb', nullable: true })
+  packageDimensions: { length?: number; width?: number; height?: number } | null;
+
   @Column({ name: 'ratings', type: 'int', nullable: true })
   ratings: number | null;
 
@@ -77,7 +108,7 @@ export class Product {
   @Column({ name: 'product_name', type: 'varchar', nullable: true })
   productName: string | null;
 
-  /** Publish lifecycle — 'draft' | 'active'. Independent from the isActive soft-delete flag. */
+  /** Publish lifecycle — 'draft' | 'active' | 'deleted'. Independent from the isActive visibility flag. */
   @Column({ name: 'status', type: 'varchar', length: 20, default: 'active' })
   status: string;
 
@@ -117,4 +148,10 @@ export class Product {
 
   @OneToMany(() => ProductVariant, (variant) => variant.product)
   variants: ProductVariant[];
+
+  @OneToMany(() => ProductAttributeValue, (value) => value.product)
+  attributeValues: ProductAttributeValue[];
+
+  @OneToMany(() => ProductPriceTier, (tier) => tier.product)
+  priceTiers: ProductPriceTier[];
 }

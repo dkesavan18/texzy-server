@@ -62,6 +62,9 @@ export class CartService {
           `Variant ${dto.productVariantId} not found for this product`,
         );
       }
+      if (!variant.isActive || variant.isEnabled === false) {
+        throw new BadRequestException('This variant is not available for purchase');
+      }
     }
 
     const cart = await this.getOrCreateCart(userId);

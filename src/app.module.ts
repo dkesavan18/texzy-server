@@ -7,6 +7,7 @@ import { AddressesModule } from './modules/addresses/addresses.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { CartModule } from './modules/cart/cart.module';
 import { CategoriesModule } from './modules/categories/categories.module';
+import { CategoryInputsModule } from './modules/category-inputs/category-inputs.module';
 import { CollectionsModule } from './modules/collections/collections.module';
 import { ConversationsModule } from './modules/conversations/conversations.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
@@ -41,6 +42,7 @@ import { VerificationsModule } from './modules/verifications/verifications.modul
     DevicesModule,
     SessionsModule,
     CategoriesModule,
+    CategoryInputsModule,
     ProductsModule,
     NeedsModule,
     CollectionsModule,

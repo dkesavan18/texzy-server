@@ -48,6 +48,17 @@ export default () => ({
         .split(',')
         .map((type) => type.trim())
         .filter(Boolean),
+      maxVideoSizeBytes: parseInt(
+        process.env.UPLOAD_MAX_VIDEO_SIZE_BYTES ?? '52428800',
+        10,
+      ),
+      allowedVideoMimeTypes: (
+        process.env.UPLOAD_ALLOWED_VIDEO_MIME_TYPES ??
+        'video/mp4,video/webm,video/quicktime'
+      )
+        .split(',')
+        .map((type) => type.trim())
+        .filter(Boolean),
     },
     thumbnail: {
       // 800px @ quality 85 keeps thumbnails crisp on retina/2x grids without a huge file size.

@@ -65,7 +65,9 @@ export class UploadsController {
       },
     },
   })
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: 52 * 1024 * 1024 } }),
+  )
   @UsePipes(
     new ValidationPipe({
       whitelist: true,
